@@ -29,10 +29,12 @@ public static class LayoutStore
         public List<string> Files { get; set; } = new();
         public List<PlotDto> Plots { get; set; } = new();
         public bool Developer { get; set; }
+        public bool TourSeen { get; set; }
         public Dictionary<string, bool> TreeHierarchy { get; set; } = new();
         public string Mode { get; set; } = "VIEW";
     }
 
+    public static readonly bool RestoreSession = false;   // not const: keeps the restore code compiled without CS0162
     public static string PathFor() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NexysView", "layout.json");
     static bool _loading;
 
@@ -45,7 +47,7 @@ public static class LayoutStore
             var d = new Dto
             {
                 Version = AppInfo.Version, Theme = e.Theme, Plot = e.Plot, W = w.Width, H = w.Height, X = w.Left, Y = w.Top, Maximized = w.WindowState == WindowState.Maximized,
-                Files = e.State.Files.Where(f => File.Exists(f.Path)).Select(f => f.Path).ToList(), Developer = e.Developer, Mode = e.Mode,
+                Files = e.State.Files.Where(f => File.Exists(f.Path)).Select(f => f.Path).ToList(), Developer = e.Developer, TourSeen = e.TourSeen, Mode = e.Mode,
                 TreeHierarchy = new Dictionary<string, bool>(e.Hier),
             };
             foreach (var p in e.Charts)
@@ -81,8 +83,10 @@ public static class LayoutStore
             if (d.Maximized) w.WindowState = WindowState.Maximized;
             if (SelfTest.Enabled) return;   // automation runs start from an empty workspace
             foreach (var kv in d.TreeHierarchy) e.Hier[kv.Key] = kv.Value;
-            foreach (var f in d.Files) if (File.Exists(f)) e.OpenFile(f);
-            foreach (var pd in d.Plots)
+            // 0.9.2 (beta feedback): the previous session's files and charts are NOT reopened — a start shows the built-in sample
+            // (SampleData) or the files given on the command line. Files/Plots are still saved for a future "restore session" option.
+            if (RestoreSession) foreach (var f in d.Files) if (File.Exists(f)) e.OpenFile(f);
+            if (RestoreSession) foreach (var pd in d.Plots)
             {
                 var chart = e.AddChart(record: false);
                 var m = chart.Model;
@@ -102,7 +106,7 @@ public static class LayoutStore
                 if (pd.XMax > pd.XMin) { m.XMin = pd.XMin; m.XMax = pd.XMax; }
                 m.CursorA.Enabled = pd.CursorA; m.CursorA.X = pd.CursorAX; m.CursorB.Enabled = pd.CursorB; m.CursorB.X = pd.CursorBX;
             }
-            e.Developer = d.Developer; e.Mode = d.Mode is "NAVIGATOR" or "VIEW" or "ANALYSIS" or "REPORT" ? d.Mode : "VIEW";
+            e.Developer = d.Developer; e.TourSeen = d.TourSeen; e.Mode = d.Mode is "NAVIGATOR" or "VIEW" or "ANALYSIS" or "REPORT" ? d.Mode : "VIEW";
             e.State.Undo.Clear();
         }
         catch { }

@@ -22,7 +22,11 @@ public partial class App : Application
         }
         else
         {
-            win.WhenReady.ContinueWith(_ => win.Dispatcher.BeginInvoke(() => { foreach (var a in e.Args) if (!a.StartsWith("--") && System.IO.File.Exists(a)) win.OpenFile(a); }));
+            win.WhenReady.ContinueWith(_ => win.Dispatcher.BeginInvoke(() =>
+            {
+                foreach (var a in e.Args) if (!a.StartsWith("--") && System.IO.File.Exists(a)) win.OpenFile(a);
+                if (win.Engine.State.Files.Count == 0) { var sample = SampleData.Ensure(); if (sample != null) win.OpenFile(sample); }   // first start: built-in sample
+            }));
         }
         win.Show();
     }

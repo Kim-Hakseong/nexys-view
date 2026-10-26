@@ -1,4 +1,4 @@
-# Nexys VIEW — v3 보고 (2026-10-22): (A) 라이트 재설계 "Warm Instrument" + (B) VeriStand 로그 기능
+# Nexys VIEW — v3 보고 (2026-10-22): (A) 라이트 재설계 "Warm Instrument" + (B) 실시간 테스트 로그 기능
 
 문서: design/DESIGN-v3-light.md(토큰·구성 요소) · docs/design-v3-review-1/2/3.md(비교 루프) · 캡처 work/design/v3loop1..3/ · 전후 쌍 work/design/v3pairs/ · 관문 work/bench/gate_v3.txt, gate_tests_v3.txt, gate_p3_v3.txt.
 자동화(`--shot/--selftest/--v3/--stress*`)는 사용자 설정·layout.json을 쓰지 않는다. 타사 이름·로고는 UI 어디에도 없다.
@@ -24,7 +24,7 @@
 |---|---|---|---|
 | 1 | NAVIGATOR 트리 | pair1 | 흰 카드·반경 10, 파일 행 칩 "TDMS · 21 ch", 계층 그룹 Sys_Man/OSM_Out, 선택 행 accent2 띠 + 점 스파크라인, 속성 패널 세리프 판독 + 점 범위 막대 |
 | 2 | VIEW 커서 | pair2 | 차트 헤더 36px(아이콘·메타 "2 curves · X System Time · rel"), 커서 상자 시각 형식 "00:12.34", 점 격자·둥근 플롯, 주황 커서 |
-| 3 | VIEW VeriStand | pair3 | 계단 곡선(command/Ready/Target Position 자동) + 디지털 레인 3개, 시간 눈금 mm:ss |
+| 3 | VIEW 실시간 테스트 시스템 | pair3 | 계단 곡선(command/Ready/Target Position 자동) + 디지털 레인 3개, 시간 눈금 mm:ss |
 | 4 | ANALYSIS | pair4 | 통계 = 세리프 카드 4개(min/max/mean/RMS) + 작은 표, 선택 함수 검정 알약, RUN 주 버튼 |
 | 5 | REPORT | pair5 | 종이 카드 반경 10, 뷰포트 폭 맞춤 |
 | 6 | NAVIGATOR 모드 | pair6 | 데이터 소스 행 카드(반경 8, 칩 FORMAT/CH/TIME, 숫자 4열 우측 모노) |
@@ -37,7 +37,7 @@
 - 비교 "start" 정렬은 파일 간격만큼 축이 길어져 짧은 로그가 점으로 보임(의도된 결과, B4 지침 참조).
 - 판독 띠는 곡선 3개부터 2줄로 wrap(v2 규칙 유지).
 
-## (B) VeriStand 로그 기능
+## (B) 실시간 테스트 로그 기능
 
 ### B1. 시간 채널을 X축으로
 - **사용**: 차트 헤더의 "USE SYSTEM TIME AS X" 알약, 속성 패널 X AXIS 섹션의 USE AS X / 곡선의 SET AS X, 또는 트리에서 시간 채널을 플롯 **아래 x축 영역**에 드롭(미리보기 "Use System Time as X axis"). 후보 = 시간 단위(s/ms/us/min/h)·단조증가·같은 샘플 수(`XIndex.SuggestX`, System Time 우선). 적용은 Undo 가능. 샘플 수가 다른 곡선은 건너뛰고 상태줄에 개수 표시.

@@ -1,4 +1,4 @@
-# Nexys VIEW 0.9.0 / 0.9.1 beta — 배포 보고 (2026-10-26)
+# Nexys VIEW 0.9.0 / 0.9.1 / 0.9.2 beta — 배포 보고 (2026-10-26)
 
 입력: beta.md. 기반: docs/webview-report.md(WebView2 전환). 저장소 https://github.com/Kim-Hakseong/nexys-view (private) · Release https://github.com/Kim-Hakseong/nexys-view/releases/tag/v0.9.0-beta
 
@@ -35,8 +35,8 @@
 | 버전 | Directory.Build.props `Version 0.9.0-beta`, AssemblyVersion/FileVersion 0.9.0.0, 창 제목 "Nexys VIEW 0.9.0 beta"(AppInfo.VersionText), 페이지 헤더 "0.9.0 BETA", layout.json에 `Version` 필드 |
 | 정보 대화상자 | `F1` 또는 로고 클릭: 버전, 베타 안내, GitHub Issues·저장소 링크(기본 브라우저로 열림, 호스트 `openUrl`), 폰트·라이브러리 고지 |
 | 설치형 | `app/dist/NexysView-0.9.0-beta-setup.exe` **58.8 MB** (Inno Setup 6.7.3, lzma2/ultra64). Program Files 설치, 시작 메뉴·바탕화면(선택) 바로가기(AppIcon), 언인스톨, 파일 연결 .tdms/.tdm/.dxd 선택(기본 해제), WebView2 런타임 없으면 번들 Evergreen 부트스트래퍼(`MicrosoftEdgeWebview2Setup.exe /silent /install`) 실행, 라이선스 폴더 `licenses\` |
-| 포터블 | `app/dist/portable/NexysView.exe` **82.1 MB** 1개 (PublishSingleFile + IncludeNativeLibrariesForSelfExtract + IncludeAllContentForSelfExtract, 압축). 첫 실행 시 `%TEMP%\.net\NexysView\`에 풀림. 더블클릭·VeriStand 파일 열기 확인(work/beta/portable_test/portable_view.png). Python DataPlugin 워커는 미포함 |
-| 설치 검증 | Windows 샌드박스: 기능 미설치(Containers-DisposableClientVM 상태 없음) · 새 사용자 계정: 관리자 권한 없이 만들 수 없어 생략. 대신 현재 PC에서 **설치 파일을 무인 설치(`/VERYSILENT /CURRENTUSER`, 새 폴더) → 설치본으로 VeriStand 로그 열기(`--shot`, 페이지 준비·차트 표시 확인) → 무인 언인스톨(폴더 제거 확인)** 까지 수행(work/beta/install_test/). WebView2 런타임이 없는 PC에서의 부트스트래퍼 경로는 코드·스크립트 검토만(이 PC에는 155.0.4283.62가 있음) |
+| 포터블 | `app/dist/portable/NexysView.exe` **82.1 MB** 1개 (PublishSingleFile + IncludeNativeLibrariesForSelfExtract + IncludeAllContentForSelfExtract, 압축). 첫 실행 시 `%TEMP%\.net\NexysView\`에 풀림. 더블클릭·실시간 테스트 시스템 파일 열기 확인(work/beta/portable_test/portable_view.png). Python DataPlugin 워커는 미포함 |
+| 설치 검증 | Windows 샌드박스: 기능 미설치(Containers-DisposableClientVM 상태 없음) · 새 사용자 계정: 관리자 권한 없이 만들 수 없어 생략. 대신 현재 PC에서 **설치 파일을 무인 설치(`/VERYSILENT /CURRENTUSER`, 새 폴더) → 설치본으로 실시간 테스트 로그 열기(`--shot`, 페이지 준비·차트 표시 확인) → 무인 언인스톨(폴더 제거 확인)** 까지 수행(work/beta/install_test/). WebView2 런타임이 없는 PC에서의 부트스트래퍼 경로는 코드·스크립트 검토만(이 PC에는 155.0.4283.62가 있음) |
 | 폰트 라이선스 | installer/licenses/ (OFL-Inter, OFL-NotoSansKR, OFL-InstrumentSerif, OFL-JetBrainsMono, THIRD-PARTY.txt) → 설치 폴더 `licenses\`, 저장소 installer/licenses/, README 라이선스 절 |
 | 앱 라이선스 | installer/LICENSE.txt(평가용 베타 라이선스, 한/영) → 설치 마법사 라이선스 페이지, 저장소 LICENSE.txt |
 
@@ -49,10 +49,10 @@
 - README: 참조 저장소(testbench-plc-sim)의 구조(제목 → 한 줄 소개 → 기술 스택 → 첫 캡처 → 설치와 실행 → 화면별 절 → 표 → 알려진 문제 → 라이선스)와 평서체 어조를 따름. 상단 로고·배지(버전·플랫폼), 캡처 3장(docs/images), 성능 표는 "기준 상용 도구" 대비로 표기(타사 이름·역분석 과정은 쓰지 않음).
 
 ## 4. 동료 배포용 안내문 (초안)
-> Nexys VIEW 0.9.0 베타를 공유합니다. TDMS/TDM 측정 로그 뷰어로, VeriStand 로그의 System Time을 X축으로 바로 쓰고 1,000만 샘플 곡선도 끊김 없이 움직입니다.
+> Nexys VIEW 0.9.0 베타를 공유합니다. TDMS/TDM 측정 로그 뷰어로, 실시간 테스트 로그의 System Time을 X축으로 바로 쓰고 1,000만 샘플 곡선도 끊김 없이 움직입니다.
 > 설치: https://github.com/Kim-Hakseong/nexys-view/releases 에서 `NexysView-0.9.0-beta-setup.exe`(설치형) 또는 `NexysView-0.9.0-beta-portable.exe`(폴더에 두고 실행)를 받으세요. Windows 10/11 64비트, WebView2 런타임은 없으면 설치 중 자동으로 받습니다.
 > 써 보기: 파일을 창에 드롭 → 채널을 차트에 드롭 → 아래 x축 영역에 System Time을 드롭하면 시간축이 됩니다. 휠 줌, 드래그 이동, 클릭 커서 A / Shift+클릭 커서 B.
-> VeriStand 로그 파일로 써보기 — X축 시간 채널(헤더의 USE SYSTEM TIME AS X), 디지털 레인(command/Ready/Fault 같은 상태 신호), 파일 비교(NAVIGATOR → COMPARE n FILES, 시작 시각/0 s/수동 정렬)가 핵심 기능입니다.
+> 실시간 테스트 로그 파일로 써보기 — X축 시간 채널(헤더의 USE SYSTEM TIME AS X), 디지털 레인(command/Ready/Fault 같은 상태 신호), 파일 비교(NAVIGATOR → COMPARE n FILES, 시작 시각/0 s/수동 정렬)가 핵심 기능입니다.
 > 피드백은 GitHub Issues로 (앱 정보 대화상자 F1에 링크). 멈춤·오류는 이벤트 로그 캡처(이벤트 뷰어 → Windows 로그 → 응용 프로그램, NexysView 항목)와 재현 순서를 함께 올려 주세요.
 > 베타라 화면과 기능이 바뀔 수 있습니다. Issues에는 Windows 버전·파일 종류(채널·샘플 수)도 적어 주시면 빠르게 봅니다.
 > 알려진 제한: 메모리 사용량이 큽니다(10곡선×10M 기준 약 1.1 GB), 포터블에는 Python DataPlugin이 없습니다.
@@ -91,3 +91,18 @@ Release https://github.com/Kim-Hakseong/nexys-view/releases/tag/v0.9.1-beta · �
 | 설치형 | `app/dist/NexysView-0.9.1-beta-setup.exe` 61.7 MB (61,739,076 B) |
 | 포터블 | `app/dist/NexysView-0.9.1-beta-portable.exe` 82.1 MB (82,140,684 B) |
 | 검증 | 무인 설치(`/VERYSILENT /CURRENTUSER /DIR=work\beta\install_test\0.9.1`, 종료 코드 0) → 설치본 실행·캡처 → 무인 언인스톨(종료 코드 0, 폴더·언인스톨 키 제거 확인). 테스트 514/514 (`work/bench/gate_tests_091.txt`) |
+
+## 6. 0.9.2 beta (2026-10-26) — 0.9.1 피드백 수정 3건 + README REPORT 절
+
+- 증상: 새로 받은 0.9.1 포터블을 열자 시간축 로그 3개가 이미 열려 있음(사용자 캡처). 원인은 기본 설정이 아니라 **layout.json의 이전 세션 파일·차트 복원**(같은 PC에서 이전에 열어 둔 파일). 새 PC에서는 비어 있었을 것이나, 요구대로 **이전 세션 파일·차트 복원을 끄고**(`LayoutStore.RestoreSession=false`, 창 크기·테마·모드·트리 계층만 복원) 시작 시 **내장 샘플**을 연다.
+- 내장 샘플 `Services/SampleData.cs`: Core `TdmsWriter`로 합성 TDMS(그룹 Sample, Time·Sine 1 Hz·Sine 5 Hz·Ramp·Temperature(double), Square·Counter(I32), State(U8), 20,000 샘플 @1 kHz, 981 KB)를 `%LOCALAPPDATA%\NexysView\sample\Sample.tdms`에 한 번 쓰고(`Sample.rev` 개정 번호로 재생성), 명령줄 파일이 없을 때 연다. `--fresh`/자동화는 `%TEMP%\NexysView\sample\`에 써서 사용자 데이터 보호 규칙 유지. 캡처 work/beta/shots/firstrun_sample.png(`--fresh` 첫 실행: 샘플 1파일·8채널, 라이트).
+- 제품명 라벨 제거: `Engine.FileDto`의 writer("실시간 테스트 시스템" 추정 라벨·파일 name/author 속성) 제거 → 데이터 소스 카드는 형식 칩만, 속성 패널 "writer" 행 삭제(work/beta/shots092/t_nav.png). 검색창 예시 `Sys_Man.*` → `Sine*`. 셀프테스트 장면 이름 `--scene timelog` → `timelog`(옛 이름도 받음), 내보내기 치환표에 실시간 테스트 시스템 → "실시간 테스트 시스템"(문서·주석) 추가.
+- README: 첫 실행 절(샘플 캡처), REPORT 절을 블록 쌓기 → A4 미리보기 → PNG/PDF 순서로 캡처 2장(앱 REPORT 모드, 내보낸 PNG 페이지)과 함께 확장. 캡처는 `--shot --open Sample.tdms --curves 3 --cursors 1 --mode REPORT --report 1 --report-out <png>`(새 옵션 `--report`: 제목·텍스트·차트·표 블록 추가, `--report-out`: ExportTo PNG).
+- **도움말 + 기능 투어** (참조: 사용자가 제시한 문서 검색 앱의 HelpModal/OnboardingTour 패턴 — 섹션 탭 가이드 모달 + 스포트라이트 투어; 구현은 `app/web/src/help.ts`, 프레임워크 없이 DOM 직접):
+  - 투어 9단계(환영 → 모드 탭 `.modes` → OPEN → 트리 `.nav` → 차트 `.view` → 속성 `.props` → 분석 `.fns`(ANALYSIS로 전환) → 보고서 `.rep-left`(REPORT로 전환) → `?` 버튼). 대상 요소를 `box-shadow 0 0 0 9999px` 스포트라이트로 비추고 카드(380 px)를 right/left/bottom/top 선호 + 화면 경계 flip, 어느 쪽도 안 맞는 큰 대상(차트)은 대상 중앙에 겹쳐 배치. 진행 막대, 건너뛰기/이전/다음/시작하기, `→` `←` `Esc`, 배경 클릭 닫기. 투어가 모드를 바꾼 경우 끝나면 시작 모드로 복귀.
+  - 첫 실행 자동 시작: 스냅샷 `app.tourSeen`(Engine.TourSeen ← layout.json `TourSeen`)이 false이고 `app.automation`(SelfTest.Enabled)이 아니면 1.2 s 뒤 시작, 끝/건너뛰기 시 브리지 `tourSeen` → 저장. `--fresh`는 저장하지 않으므로 매번 뜬다(캡처 work/beta/shots/firstrun_tour.png).
+  - 사용 가이드 모달(760×540, `?` 버튼·`F1`; 정보 대화상자는 로고 클릭으로 유지): 시작하기(기능 투어 다시 보기 버튼, 처음 사용 4단계, 샘플 설명, Issues 링크) · 화면 구성 · 차트 조작(드롭 위치 표, 보기 표, 시간축·계단) · 분석(함수별 카드) · 보고서 · 단축키(kbd 표) · 활용 팁. 내용은 README와 같은 사실만.
+  - 캡처 옵션 `--shot … --tour n` / `--help section`(`nx.test.tour/help`). 캡처 work/beta/shots092/tour_0…8.png, tour_dark.png, help_start/keys/chart.png. 헤더에 HELP를 글자 버튼으로 넣자 1440 px에서 PLOT · DARK가 두 줄로 꺾여 **아이콘 전용 `?` 버튼** + `.tool` nowrap으로 수정.
+- 패키징 0.9.2: `app/dist/NexysView-0.9.2-beta-setup.exe` 61.7 MB (61,748,763 B), `app/dist/NexysView-0.9.2-beta-portable.exe` 82.1 MB (82,141,589 B). 테스트 514/514 (work/bench/gate_tests_092.txt), 무인 설치(work/beta/install_test/0.9.2) → 설치본 `--fresh` 실행(제목 "Nexys VIEW 0.9.2 beta") → 무인 언인스톨(폴더 제거) 확인. 내보내기(C:
+ea-work
+exys-view) 완료, **GitHub 커밋·릴리스는 사용자 요청으로 보류**(추가 기능 후 함께 배포).

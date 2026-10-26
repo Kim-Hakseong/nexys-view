@@ -123,6 +123,7 @@ public sealed class Bridge
             case "setTheme": _e.Theme = S(r, "theme", "light"); _e.Touch(); return null;
             case "setPlot": _e.Plot = S(r, "plot", "dark"); _e.Touch(); _e.TouchChart(-1); return null;
             case "setDeveloper": _e.Developer = B(r, "on"); _e.Touch(); return null;
+            case "tourSeen": _e.TourSeen = true; _e.Touch(); return null;
             case "select": _e.Selected = S(r, "channel") is { Length: > 0 } s ? s : null; _e.Touch(); return null;
             case "selectFile": _e.SelectedFile = S(r, "name") is { Length: > 0 } fn ? fn : null; _e.Touch(); return null;
             case "selectFiles": _e.SelectedFiles.Clear(); _e.SelectedFiles.AddRange(SL(r, "names")); _e.Touch(); return null;

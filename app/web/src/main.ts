@@ -1,6 +1,7 @@
 // App shell: header (brand · mode pills · tools · LED) / main (mode-specific) / footer; state fan-out; keyboard; file drop; test hooks.
 import { Analysis } from './analysis';
 import { bridge } from './bridge';
+import { Help } from './help';
 import { I } from './icons';
 import { NavMode } from './navmode';
 import { Navigator } from './navigator';
@@ -17,6 +18,7 @@ const hdr = h(`<header class="hdr"></header>`);
 const main = h(`<main class="main"></main>`);
 const ftr = h(`<footer class="ftr"><span class="d"></span><span class="txt"></span><span class="r"></span></footer>`);
 app.append(hdr, main, ftr);
+const help = new Help();
 const nav = new Navigator(); const view = new ViewArea(); const props = new Properties(); const navMode = new NavMode(); const analysis = new Analysis(); const report = new Report();
 let frameInfo = '';
 
@@ -28,6 +30,7 @@ function renderHeader() {
   hdr.innerHTML = `<div class="hdr-brand"><div class="hdr-logo" data-a="about" title="About Nexys VIEW (F1)"><img src="brand/Logo.png" alt="Nexys VIEW"></div><div class="hdr-name"><small>${esc((app.versionText || '').toUpperCase())}${S.developer ? ' · DEVELOPER' : ''}</small></div></div>
     <nav aria-label="Mode" class="hdr-nav"><div class="modes">${mode('NAVIGATOR')}${mode('VIEW')}${mode('ANALYSIS')}${mode('REPORT')}</div></nav>
     <div class="hdr-tools">${tool('open', I.folder(), 'OPEN', 'Open file (Ctrl+O)')}${tool('save', I.save(), 'SAVE', 'Save all channels as TDMS (Ctrl+S)')}<div class="vsep"></div>${tool('undo', I.undo(), 'UNDO', S.undo.can ? `Undo ${S.undo.name} (Ctrl+Z)` : 'Undo (Ctrl+Z)', !S.undo.can)}${tool('redo', I.redo(), 'REDO', 'Redo (Ctrl+Y)', !S.undo.canRedo)}<div class="vsep"></div>${tool('theme', S.theme === 'dark' ? I.sun() : I.theme(), 'THEME', 'Toggle light / dark chrome (Ctrl+T)')}${tool('plot', I.plot(), 'PLOT · ' + S.plot.toUpperCase(), 'Toggle dark / light plot (Ctrl+P)')}<div class="vsep"></div>${tool('dev', I.info(), 'DEV', 'Developer mode (Ctrl+D)')}</div>
+    <div class="vsep"></div><button type="button" class="tool icon" data-a="help" aria-label="HELP" title="사용 가이드 · 기능 투어 (F1)">${I.help()}</button>
     <div class="led-pill"><span class="led ${S.status.led}"></span><span class="led-text">${S.status.led.toUpperCase()}</span></div>`;
 }
 hdr.addEventListener('click', e => {
@@ -35,6 +38,7 @@ hdr.addEventListener('click', e => {
   const m = (t.closest('[data-mode]') as HTMLElement | null)?.dataset.mode; if (m) { setMode(m); return; }
   const a = (t.closest('[data-a]') as HTMLElement | null)?.dataset.a; if (!a) return;
   if (a === 'about') { showAbout(); return; }
+  if (a === 'help') { help.show(); return; }
   if (a === 'open') bridge.call('openDialog'); else if (a === 'save') bridge.call('saveDialog'); else if (a === 'undo') bridge.call('undo'); else if (a === 'redo') bridge.call('redo');
   else if (a === 'theme') bridge.call('setTheme', { theme: S?.theme === 'dark' ? 'light' : 'dark' }); else if (a === 'plot') bridge.call('setPlot', { plot: S?.plot === 'dark' ? 'light' : 'dark' }); else if (a === 'dev') bridge.call('setDeveloper', { on: !S?.developer });
 });
@@ -62,6 +66,7 @@ function applyState(next: State) {
   const prevMode = S?.mode; S = next;
   document.documentElement.dataset.theme = S.theme; document.documentElement.dataset.plot = S.plot;
   renderHeader(); renderMain(); renderFooter();
+  help.setState(S);
   nav.setState(S);
   if (S.mode === 'VIEW') { view.setState(S); props.setState(S); }
   else if (S.mode === 'NAVIGATOR') { navMode.setState(S); props.setState(S); }
@@ -92,7 +97,7 @@ function showAbout() {
   });
   document.body.append(dlg);
 }
-window.addEventListener('keydown', e => { if (e.key === 'F1') { e.preventDefault(); showAbout(); } if (e.key === 'Escape') document.querySelector('.modal-bg')?.remove(); });
+window.addEventListener('keydown', e => { if (e.key === 'F1') { e.preventDefault(); help.show(); } if (e.key === 'Escape') document.querySelector('.modal-bg')?.remove(); });
 
 // ---------- keyboard
 document.addEventListener('keydown', e => {
@@ -194,6 +199,9 @@ const test = {
   async clickSel(sel: string) { const el = document.querySelector(sel) as HTMLElement | null; if (!el) throw new Error('no element ' + sel); el.click(); await new Promise(r => setTimeout(r, 60)); await settle(); return true; },
   async search(q: string) { nav.setSearch(q); await new Promise(r => setTimeout(r, 30)); return nav.matches.map(c => c.id); },
   async selectChannel(id: string) { const row = nav.rowElement(id); if (!row) throw new Error('row not visible ' + id); row.click(); await new Promise(r => setTimeout(r, 60)); await settle(); return true; },
+  /** Feature tour at step n / help guide section (captures, gates). */
+  async tour(n = 0) { await help.startTour(n); await new Promise(r => setTimeout(r, 250)); await settle(); return !!document.querySelector('.tour-card'); },
+  async help(section = 'start') { help.show(section); await new Promise(r => setTimeout(r, 100)); return !!document.querySelector('.help-pane'); },
   async mode(m: string) { setMode(m); await new Promise(r => setTimeout(r, 80)); await settle(); return true; },
   frameStats(chart: number) { const pv = this.plot(chart); return pv ? { frames: pv.frames, lastMs: pv.lastTotalMs, engineMs: pv.lastEngineMs, timings: pv.timings.slice(-60).map(t => t.t1 - t.t0) } : null; },
   async reportPage() { await report.refreshPage(); await new Promise(r => setTimeout(r, 100)); return !!report.el.querySelector('img')?.getAttribute('src'); },

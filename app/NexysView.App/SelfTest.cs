@@ -83,7 +83,7 @@ public static partial class SelfTest
         var e = w.Engine;
         e.Theme = Arg("--theme", "light"); e.Plot = Arg("--plot", "dark");
         foreach (var f in ArgAll("--open")) e.OpenFile(f);
-        if (Arg("--scene") == "veristand") { await VeriStandScene(w); await Shot(w, Arg("--name", "shot")); if (Arg("--probe") == "1") await Probe(w, Arg("--name", "shot")); return; }
+        if (Arg("--scene") is "timelog" or "timelog") { await TimeLogScene(w); await Shot(w, Arg("--name", "shot")); if (Arg("--probe") == "1") await Probe(w, Arg("--name", "shot")); return; }
         int n = int.Parse(Arg("--curves", "3"));
         var chans = e.State.Files.SelectMany(f => f.AllChannels).Where(c => !c.IsText).Take(n).ToList();
         if (chans.Count > 0)
@@ -105,8 +105,20 @@ public static partial class SelfTest
             e.Analysis.SetInputs(new[] { inCh.Id }); foreach (var kv in ArgAll("--param")) { var p = kv.Split('='); if (p.Length == 2) e.Analysis.SetParam(p[0], p[1]); }
             await e.Analysis.RunAsync(Arg("--analysis"));
         }
+        if (Arg("--report", "0") == "1" && e.Charts.Count > 0)
+        {
+            int cid = e.Charts[0].Id;
+            e.Report.Add("Title", 0, Arg("--report-title", "Sample report"));
+            e.Report.Add("Text", 0, Arg("--report-text", "Sine 1 Hz / Sine 5 Hz / Ramp from the built-in sample, cursors A-B at 30 % and 70 % of the record."));
+            e.Report.Add("Chart", cid);
+            e.Report.Add("Table", cid);
+            if (Arg("--report-out") != "") { e.Report.ExportTo(Arg("--report-out"), false); L("report png " + Arg("--report-out")); }
+        }
         e.Mode = Arg("--mode", "VIEW"); e.Touch();
         await Idle(w, 400);
+        if (Arg("--tour") != "") L("tour " + await JS(w, $"return await nx.test.tour({Arg("--tour")});"));
+        if (Arg("--help") != "") L("help " + await JS(w, $"return await nx.test.help('{Arg("--help")}');"));
+        if (Arg("--tour") != "" || Arg("--help") != "") await Idle(w, 500);
         await Shot(w, Arg("--name", "shot"));
         L("buffers " + await w.Bridge!.Eval("JSON.stringify(Array.from(nx.bridge.buffers.keys()))"));
         L("frames " + await w.Bridge!.Eval("JSON.stringify(nx.test.frameStats(nx.state.activeChart))"));
@@ -114,7 +126,7 @@ public static partial class SelfTest
 
     /// <summary>The scene of design/mockup/view.html: Log 05_28, chart "Target Position · DEG · Sys_Man.ACT_Interval_Value · Sys_Man.IGV"
     /// + lanes command/Ready/Fault on System Time (relative), cursors A = 8.4 s, B = 19.7 s, Target Position selected.</summary>
-    static async Task VeriStandScene(MainWindow w)
+    static async Task TimeLogScene(MainWindow w)
     {
         var e = w.Engine; string uf = Path.Combine(TdmsRoot(), "work", "userfiles");
         var logs = Directory.GetFiles(uf, "*.tdms").OrderBy(f => f).ToList();

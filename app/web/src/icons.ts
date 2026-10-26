@@ -30,5 +30,6 @@ export const I = {
   play: (s = 14) => wrap('<path d="m6 4 14 8-14 8z"></path>', s, '#fff'),
   table: (s = 14) => wrap('<path d="M3 5h18v14H3zM3 10h18M3 15h18M9 5v14M15 5v14"></path>', s),
   file: (s = 14) => wrap('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6"></path>', s),
+  help: (s = 15) => wrap('<circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path>', s),
   check: (s = 12) => wrap('<path d="m5 12 5 5L20 7"></path>', s),
 };

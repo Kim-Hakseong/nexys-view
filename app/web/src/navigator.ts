@@ -24,7 +24,7 @@ export class Navigator {
     this.el = h(`<aside class="card aside nav"></aside>`);
     this.el.innerHTML = `<div class="card-h"><span class="ic">${I.list()}</span><span class="t">NAVIGATOR</span><span class="m" data-meta></span></div>
       <div class="nav-search"><label for="q" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Search channels</label>
-        <div class="search">${I.search()}<input id="q" type="search" placeholder="Search channels  ·  Sys_Man.*" autocomplete="off"></div>
+        <div class="search">${I.search()}<input id="q" type="search" placeholder="Search channels  ·  Sine*" autocomplete="off"></div>
         <div class="nav-btns"><button class="pill on" data-b="tree">TREE</button><button class="pill" data-b="flat">FLAT</button><button class="pill right" data-b="drop">DROP ALL</button></div></div>
       <div class="tree"><div class="spacer" style="position:relative"><div class="inner" style="position:absolute;left:0;right:0;top:0"></div></div></div>`;
     this.tree = this.el.querySelector('.tree')!; this.spacer = this.el.querySelector('.spacer')!; this.inner = this.el.querySelector('.inner')!;

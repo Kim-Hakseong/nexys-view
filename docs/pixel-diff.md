@@ -1,7 +1,7 @@
 # 픽셀 대조 — 앱(WebView2) vs 목업 (2026-10-26)
 
-같은 데이터(VeriStand 로그 3개 중 Log File_2026_02_27_05_28_20, 차트 = Target Position · DEG · Sys_Man.ACT_Interval_Value · Sys_Man.IGV + 레인 command/Ready/Fault, X = System Time(relative), 커서 A 8.4 s / B 19.7 s, Target Position 선택)를 넣고
-앱 캡처(`NexysView.exe --shot --scene veristand --mode VIEW|NAVIGATOR|ANALYSIS --probe 1`, WebView2 CapturePreview, 페이지 1440×900)와
+같은 데이터(실시간 테스트 로그 3개 중 Log File_2026_02_27_05_28_20, 차트 = Target Position · DEG · Sys_Man.ACT_Interval_Value · Sys_Man.IGV + 레인 command/Ready/Fault, X = System Time(relative), 커서 A 8.4 s / B 19.7 s, Target Position 선택)를 넣고
+앱 캡처(`NexysView.exe --shot --scene timelog --mode VIEW|NAVIGATOR|ANALYSIS --probe 1`, WebView2 CapturePreview, 페이지 1440×900)와
 목업 캡처(design/mockup/*.html의 오프라인 복사본 work/webview/mockup/*.html — Google Fonts 링크만 번들 폰트 @font-face로 교체 — 를 헤드리스 Chrome `--window-size=1440,900 --screenshot`)를 나란히 비교했다.
 도구: tools/pixel_diff.py (영역별 평균 차·변경 픽셀·레이아웃 프로파일 상관, 구분선 y/패널 x 좌표 비교, DOM 프로브 app/web/public/probe.js 비교). 결과 시트 work/webview/pixel/{view,navigator,analysis}_diff.png (앱 | 목업 | 차이×3), 수치 work/webview/pixel/diff_summary.md, *_diff.json, *_probe.json.
 

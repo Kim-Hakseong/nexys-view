@@ -12,7 +12,7 @@ export class Analysis {
   private resCard: HTMLElement; private resHead: HTMLElement; private plotHost: HTMLElement; private statsEl: HTMLElement; private rcCard: HTMLElement;
   constructor() {
     this.el = h(`<div style="display:contents"></div>`);
-    this.fns = h(`<section class="card" style="width:240px;flex:0 0 240px"><div class="card-h"><span class="ic">${I.sliders()}</span><span class="t">FUNCTIONS</span><span class="m">9</span></div><div class="fn-list"></div></section>`);
+    this.fns = h(`<section class="card fns" style="width:240px;flex:0 0 240px"><div class="card-h"><span class="ic">${I.sliders()}</span><span class="t">FUNCTIONS</span><span class="m">9</span></div><div class="fn-list"></div></section>`);
     this.center = h(`<section class="center"></section>`);
     this.resCard = h(`<div class="card" style="flex:0 0 auto"></div>`);
     this.resHead = h(`<div class="res-h"></div>`);

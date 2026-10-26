@@ -8,7 +8,7 @@ using NexysView.Render;
 namespace NexysView.App;
 
 /// <summary>
-/// --selftest (P9 gates on the web UI), --v3 (VeriStand log feature gates), --stress / --stress-analysis (stability gates).
+/// --selftest (P9 gates on the web UI), --v3 (time-axis log feature gates), --stress / --stress-analysis (stability gates).
 /// Interaction goes through real DOM events on the page (window.nx.test.*: synthetic DragEvent/PointerEvent/WheelEvent),
 /// frame times are measured on the page (request → painted, bridge round-trip included), captures are WebView2 previews.
 /// </summary>

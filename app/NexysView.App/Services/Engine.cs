@@ -33,6 +33,8 @@ public sealed class Engine
     public string Theme { get; set; } = DefaultTheme;
     public string Plot { get; set; } = DefaultPlot;
     public bool Developer { get; set; }
+    /// <summary>Feature tour finished or skipped once (layout.json); false on a first start → the page auto-starts the tour.</summary>
+    public bool TourSeen { get; set; }
     public string StatusText { get; private set; } = "";
     public string Led { get; private set; } = "idle";
     public string AlignMode { get; set; } = "start";
@@ -403,7 +405,7 @@ public sealed class Engine
         return new
         {
             theme = Theme, plot = Plot, mode = Mode, developer = Developer,
-            app = new { version = AppInfo.Version, versionText = AppInfo.VersionText, beta = AppInfo.IsBeta, repo = AppInfo.Repo, issues = AppInfo.Issues },
+            app = new { version = AppInfo.Version, versionText = AppInfo.VersionText, beta = AppInfo.IsBeta, repo = AppInfo.Repo, issues = AppInfo.Issues, tourSeen = TourSeen, automation = SelfTest.Enabled },
             status = new { text = StatusText, led = Led },
             undo = new { can = State.Undo.CanUndo, name = State.Undo.UndoName, canRedo = State.Undo.CanRedo },
             files, filesVersion = FilesVersion, charts, sparks,
@@ -426,11 +428,9 @@ public sealed class Engine
         long size = 0; try { if (File.Exists(f.Path)) size = new FileInfo(f.Path).Length; } catch { }
         var (t, dur, rate) = Compare.TimeInfo(f);
         double start = Compare.FileStart(f);
-        string writer = f.Properties.TryGetValue("name", out var nm) ? nm?.ToString() ?? "" : f.Properties.TryGetValue("author", out var au) ? au?.ToString() ?? "" : "";
-        bool veri = f.AllChannels.Any(c => c.Name == "System Time") && f.AllChannels.Any(c => c.Name == "Absolute Time");
         var dto = new
         {
-            name = f.Name, path = f.Path, dir = Path.GetDirectoryName(f.Path) ?? "", format = f.Format.ToUpperInvariant(), writer = veri ? "VeriStand" : writer,
+            name = f.Name, path = f.Path, dir = Path.GetDirectoryName(f.Path) ?? "", format = f.Format.ToUpperInvariant(), writer = "",   // 0.9.2: no writer/product label, the format chip is enough
             channelCount = f.ChannelCount, samples = f.AllChannels.Sum(c => c.Length), sizeBytes = size, openMs = f.OpenTime.TotalMilliseconds,
             start = double.IsFinite(start) ? start : (double?)null, startText = double.IsFinite(start) ? TimeAxis.DateOf(start).Replace(" UTC", "") + " " + TimeAxis.FormatAbsolute(start, 0.001) : "",
             duration = double.IsFinite(dur) ? dur : (double?)null, rate = double.IsFinite(rate) ? rate : (double?)null,

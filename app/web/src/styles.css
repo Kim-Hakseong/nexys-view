@@ -52,6 +52,9 @@ input, select { font-family: var(--sans); }
 .hdr-tools { display: flex; align-items: center; gap: 2px; }
 .tool { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 0; background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.05em; border-radius: 999px; }
 .tool:hover { color: var(--text); }
+.tool, .tool span { white-space: nowrap; }
+.tool.icon { padding: 0 8px; }
+.tool.icon svg { width: 16px; height: 16px; }
 .tool:disabled { opacity: 0.4; cursor: default; }
 .tool svg { width: 15px; height: 15px; }
 .vsep { width: 1px; height: 18px; background: var(--border-strong); margin: 0 4px; }
@@ -287,3 +290,54 @@ input, select { font-family: var(--sans); }
 .modal label.ck { display: flex; align-items: center; gap: 8px; font-size: 12px; height: 24px; cursor: pointer; }
 .modal .btns { display: flex; justify-content: flex-end; gap: 8px; }
 .ck input { accent-color: var(--accent); }
+
+/* help guide (F1) */
+.help { width: 760px; height: 540px; max-height: 86vh; padding: 0; gap: 0; }
+.help-h { height: 48px; flex: 0 0 48px; display: flex; align-items: center; padding: 0 18px; border-bottom: 1px solid var(--border); }
+.help-h b { font-size: 14px; font-weight: 600; color: var(--text); }
+.help-h .xbtn { margin-left: auto; }
+.help-body { flex: 1; display: flex; min-height: 0; }
+.help-nav { width: 132px; flex: 0 0 132px; display: flex; flex-direction: column; gap: 2px; padding: 14px 10px; border-right: 1px solid var(--border); }
+.help-nav button { height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+.help-nav button:hover { color: var(--text); }
+.help-nav button.on { background: var(--bg); color: var(--text); font-weight: 600; }
+.help-ver { margin-top: auto; padding: 8px 12px 0; font-family: var(--mono); font-size: 10px; color: var(--faint); }
+.help-pane { flex: 1; overflow: auto; padding: 18px 22px; font-size: 12.5px; line-height: 1.65; color: var(--text); }
+.help-pane h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+.help-pane h4 { margin: 16px 0 4px; font-size: 12.5px; font-weight: 600; }
+.help-pane p { margin: 0 0 8px; }
+.help-pane ol { margin: 0 0 8px; padding-left: 18px; }
+.help-pane ol li { margin: 2px 0; }
+.help-pane code { font-family: var(--mono); font-size: 11px; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+.help-pane kbd, .tour-body kbd { font-family: var(--mono); font-size: 10.5px; padding: 1px 6px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 5px; background: var(--panel); color: var(--text); white-space: nowrap; }
+.help-pane a { color: var(--accent2); text-decoration: underline; }
+.help-card { background: var(--bg); border-radius: 8px; padding: 10px 12px; margin: 0 0 8px; }
+.help-card b { display: block; font-size: 12.5px; margin-bottom: 2px; }
+.help-card p { margin: 0; color: var(--muted); }
+.help-note { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: var(--bg); border-left: 3px solid var(--accent2); color: var(--muted); font-size: 12px; }
+.help-tour { width: 100%; height: 40px; margin: 0 0 16px; border: 0; border-radius: 8px; background: var(--accent); color: var(--on-accent); font: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.help-tour svg { width: 13px; height: 13px; }
+.help-table, .help-keys { width: 100%; border-collapse: collapse; margin: 0 0 8px; }
+.help-table td, .help-keys td { padding: 6px 4px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.help-table td:first-child { width: 150px; font-weight: 600; white-space: nowrap; }
+.help-keys td:last-child { text-align: right; white-space: nowrap; }
+/* feature tour */
+.tour { position: fixed; inset: 0; z-index: 30; }
+.tour-bg { position: absolute; inset: 0; }
+.tour.nospot .tour-bg { background: rgba(0,0,0,0.35); }
+.tour-spot { position: fixed; border-radius: 8px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.55), 0 0 0 1.5px var(--accent2); transition: top .2s ease-out, left .2s ease-out, width .2s ease-out, height .2s ease-out; }
+.tour-card { position: fixed; width: 380px; max-width: calc(100vw - 32px); background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 20px 60px -15px rgba(0,0,0,0.4), 0 8px 20px -8px rgba(0,0,0,0.2); color: var(--text); }
+.tour-top { display: flex; align-items: center; padding: 14px 16px 0; }
+.tour-step { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; color: var(--accent2); font-weight: 600; }
+.tour-top .xbtn { margin-left: auto; }
+.tour-title { padding: 6px 16px 0; font-size: 14px; font-weight: 600; }
+.tour-body { padding: 8px 16px 12px; font-size: 12.5px; line-height: 1.6; }
+.tour-body p { margin: 0 0 6px; }
+.tour-body p.sub { font-size: 11.5px; color: var(--muted); }
+.tour-body code { font-family: var(--mono); font-size: 11px; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+.tour-bar { height: 3px; margin: 0 16px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.tour-bar i { display: block; height: 100%; background: var(--accent2); transition: width .25s ease-out; }
+.tour-foot { display: flex; align-items: center; gap: 8px; padding: 12px 16px 14px; margin-top: 10px; background: var(--bg); border-top: 1px solid var(--border); border-radius: 0 0 12px 12px; }
+.tour-foot .sp { flex: 1; }
+.tour-skip { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+.tour-skip:hover { color: var(--text); }
