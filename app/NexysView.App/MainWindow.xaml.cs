@@ -47,7 +47,7 @@ public partial class MainWindow : Window
                 if (Directory.Exists(fixedDir)) { Diag.Trace("using fixed runtime " + fixedDir); FixedRuntimeFolder = fixedDir; }
                 else throw new InvalidOperationException("Microsoft Edge WebView2 Runtime is not installed");
             }
-            string userData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NexysView", SelfTest.Enabled ? "WebView2-auto" : "WebView2");
+            string userData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NexysView", SelfTest.Enabled ? "WebView2-auto" : Program.Fresh ? "WebView2-fresh" : "WebView2");
             var opts = new CoreWebView2EnvironmentOptions { AdditionalBrowserArguments = "--disable-features=msSmartScreenProtection" };
             var env = await CoreWebView2Environment.CreateAsync(FixedRuntimeFolder, userData, opts);
             RuntimeVersion = env.BrowserVersionString;
@@ -142,7 +142,7 @@ public partial class MainWindow : Window
 /// <summary>Version strings for the title bar, the page header and the About dialog (from the assembly's InformationalVersion).</summary>
 public static class AppInfo
 {
-    public static string Version { get; } = (typeof(AppInfo).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).FirstOrDefault() as System.Reflection.AssemblyInformationalVersionAttribute)?.InformationalVersion.Split('+')[0] ?? "0.9.0-beta";
+    public static string Version { get; } = (typeof(AppInfo).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).FirstOrDefault() as System.Reflection.AssemblyInformationalVersionAttribute)?.InformationalVersion.Split('+')[0] ?? "0.9.1-beta";
     public static bool IsBeta => Version.Contains("beta", StringComparison.OrdinalIgnoreCase);
     /// <summary>"0.9.0 beta"</summary>
     public static string VersionText => Version.Replace("-beta", " beta");

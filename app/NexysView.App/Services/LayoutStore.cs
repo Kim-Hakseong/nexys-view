@@ -38,7 +38,7 @@ public static class LayoutStore
 
     public static void Save(MainWindow w)
     {
-        if (_loading || SelfTest.Enabled) return;   // automation must not clobber the user's layout
+        if (_loading || SelfTest.Enabled || Program.Fresh) return;   // automation / --fresh must not clobber the user's layout
         try
         {
             var e = w.Engine;
@@ -69,14 +69,14 @@ public static class LayoutStore
     public static void Load(MainWindow w)
     {
         var path = PathFor();
-        if (!File.Exists(path)) return;
+        if (!File.Exists(path) || Program.Fresh) return;   // first start (or --fresh): built-in defaults = light chrome, dark plot
         _loading = true;
         try
         {
             var d = JsonSerializer.Deserialize<Dto>(File.ReadAllText(path));
             if (d == null) return;
             var e = w.Engine;
-            e.Theme = d.Theme; e.Plot = d.Plot;
+            e.Theme = d.Theme is "light" or "dark" ? d.Theme : Engine.DefaultTheme; e.Plot = d.Plot is "light" or "dark" ? d.Plot : Engine.DefaultPlot;
             if (!double.IsNaN(d.X) && d.W > 300) { w.Left = d.X; w.Top = d.Y; w.Width = d.W; w.Height = d.H; }
             if (d.Maximized) w.WindowState = WindowState.Maximized;
             if (SelfTest.Enabled) return;   // automation runs start from an empty workspace

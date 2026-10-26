@@ -22,7 +22,7 @@ public partial class App : Application
         }
         else
         {
-            win.WhenReady.ContinueWith(_ => win.Dispatcher.BeginInvoke(() => { foreach (var a in e.Args) if (System.IO.File.Exists(a)) win.OpenFile(a); }));
+            win.WhenReady.ContinueWith(_ => win.Dispatcher.BeginInvoke(() => { foreach (var a in e.Args) if (!a.StartsWith("--") && System.IO.File.Exists(a)) win.OpenFile(a); }));
         }
         win.Show();
     }

@@ -4,7 +4,7 @@
 
 **측정 데이터 뷰어 — TDMS·TDM 로그를 열고, 1,000만 샘플 곡선을 16 ms 안에 움직이고, VeriStand 로그를 시간축 그대로 본다.**
 
-![version](https://img.shields.io/badge/version-0.9.0--beta-7A1020) ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-17181A) ![runtime](https://img.shields.io/badge/.NET-8.0%20self--contained-5F5E5A) ![ui](https://img.shields.io/badge/UI-WebView2-5F5E5A)
+![version](https://img.shields.io/badge/version-0.9.1--beta-7A1020) ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-17181A) ![runtime](https://img.shields.io/badge/.NET-8.0%20self--contained-5F5E5A) ![ui](https://img.shields.io/badge/UI-WebView2-5F5E5A)
 
 C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 보고서 · 단위 테스트 514개
 
@@ -17,7 +17,7 @@ C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 보고�
 ## 설치와 실행
 
 ### 설치형 (권장)
-1. [Releases](https://github.com/Kim-Hakseong/nexys-view/releases)에서 `NexysView-0.9.0-beta-setup.exe`를 받아 실행한다.
+1. [Releases](https://github.com/Kim-Hakseong/nexys-view/releases)에서 `NexysView-0.9.1-beta-setup.exe`를 받아 실행한다.
 2. Program Files에 설치되고 시작 메뉴·바탕화면 바로가기가 만들어진다. `.tdms` / `.tdm` / `.dxd` 연결은 설치 중 선택(기본 해제).
 3. Microsoft Edge WebView2 런타임이 없는 PC에서는 설치 중에 자동으로 받아 설치한다(인터넷 필요). Windows 11과 최신 Windows 10에는 이미 들어 있다.
 
@@ -68,7 +68,7 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 - **라이트/다크 테마**, 밝은 플롯(점 격자) 옵션, 창·파일·차트 레이아웃 자동 복원, Undo/Redo.
 
 ## 성능 (같은 PC, 기준 상용 분석 도구와 비교)
-| 항목 | Nexys VIEW 0.9.0 beta | 기준 상용 도구 |
+| 항목 | Nexys VIEW 0.9.1 beta | 기준 상용 도구 |
 |---|---|---|
 | 1 GB TDMS 열기 (16 ch × 8M) | 6 ms | 29 ms |
 | 10M 샘플 첫 곡선 표시 (드롭 → 피라미드 → 첫 프레임) | 0.35 s | 1.06 s |
@@ -104,7 +104,7 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 | XY 차트 | 트리에서 `Ctrl`-클릭으로 채널 2개 고른 뒤 드롭 |
 | 파일 비교 | 파일 행 `Ctrl`-클릭 → COMPARE |
 
-## 알려진 문제 (0.9.0 beta)
+## 알려진 문제 (0.9.1 beta)
 - 메모리: 10곡선 × 10M을 띄운 뒤 앱 프로세스 ~600 MB + WebView2 프로세스 ~500 MB. 차트를 많이 만들고 닫으면 브라우저 프로세스 메모리가 바로 줄지 않는다(창을 닫으면 해제).
 - 첫 프레임은 공유 메모리 버퍼가 도착하기 전이라 조금 느리다(약 100 ms).
 - X축 매핑은 샘플 수가 같은 곡선만 된다. 절대 시각은 UTC로만 표시한다.

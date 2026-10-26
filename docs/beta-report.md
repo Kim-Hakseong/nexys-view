@@ -1,4 +1,4 @@
-# Nexys VIEW 0.9.0 beta — 배포 보고 (2026-10-26)
+# Nexys VIEW 0.9.0 / 0.9.1 beta — 배포 보고 (2026-10-26)
 
 입력: beta.md. 기반: docs/webview-report.md(WebView2 전환). 저장소 https://github.com/Kim-Hakseong/nexys-view (private) · Release https://github.com/Kim-Hakseong/nexys-view/releases/tag/v0.9.0-beta
 
@@ -56,3 +56,38 @@
 > 피드백은 GitHub Issues로 (앱 정보 대화상자 F1에 링크). 멈춤·오류는 이벤트 로그 캡처(이벤트 뷰어 → Windows 로그 → 응용 프로그램, NexysView 항목)와 재현 순서를 함께 올려 주세요.
 > 베타라 화면과 기능이 바뀔 수 있습니다. Issues에는 Windows 버전·파일 종류(채널·샘플 수)도 적어 주시면 빠르게 봅니다.
 > 알려진 제한: 메모리 사용량이 큽니다(10곡선×10M 기준 약 1.1 GB), 포터블에는 Python DataPlugin이 없습니다.
+
+## 5. 0.9.1 beta (2026-10-26) — 베타 피드백 수정 2건
+
+Release https://github.com/Kim-Hakseong/nexys-view/releases/tag/v0.9.1-beta · 캡처 폴더 work/beta/icons/
+
+### a) 작업 표시줄·작업 관리자 아이콘 (포터블·설치형 공통)
+- 증상 재현: 포터블 exe와 설치본 모두 **작업 표시줄 버튼과 작업 관리자 행이 흰 빈 문서 아이콘**. Alt+Tab(창 아이콘)과 탐색기(exe 아이콘)는 정상. 캡처 `p1_taskbar_zoom.png`(포터블), `p1_taskmgr_top.png`("NexysView.exe" 행, 빈 아이콘), `cmp_taskbar.png`(위: 포터블, 가운데: 설치형 dist/app, 아래: AUMID 끈 포터블).
+- 진단 (모두 읽기 전용 검사, ResourceHacker 없이):
+
+| 검사 | 결과 |
+|---|---|
+| PE 아이콘 리소스 (`tools/pe_icons.py`, stdlib PE 파서) | dist/app·dist/portable·bin 모두 RT_GROUP_ICON 32512 1개 = 16/24/32/48/64/256 px @32bpp 6장. **단일 파일 apphost에도 포함** → ApplicationIcon 누락 아님 |
+| 셸 추출 (`ExtractAssociatedIcon`, `ExtractIconEx(exe,0)`) | 두 exe 모두 32×32 NXS 아이콘 반환 (`portable_assoc.png`, `regular_assoc.png`) → 탐색기·파일 연결 아이콘은 정상 |
+| 창 아이콘 (Alt+Tab, `p1_screen.png`) | 정상 |
+| 창 AppUserModel 속성 저장소 (`SHGetPropertyStoreForWindow` 읽기) | ID=`Nexys.NexysView`, RelaunchCommand=`"<exe>"`, RelaunchIconResource=`<exe>,0` — 이미 `Environment.ProcessPath` 기준으로 기록돼 있었음(Assembly.Location 아님) |
+| AUMID 끄고 실행 (`NEXYS_NO_AUMID=1`) | 작업 표시줄 NXS 아이콘 **정상** (`cmp_taskbar.png` 3행) |
+| 실행 중 창의 속성 값을 바꿔 가며 버튼 재생성 (`icon_probe2/3.ps1`) | RelaunchIconResource = `<exe>,0` · `<exe>,-32512` · `@<exe>,-32512` · `AppIcon.ico,0` · 새 경로 복사본 `,0` · 심지어 `shell32.dll,-16` 까지 **전부 빈 문서 아이콘**; ID 키를 지우는 순간 NXS 아이콘 복귀 (`cmp_probe2.png`, `cmp_probe3.png`) |
+
+- 결론(확정): 이 PC(Windows 11 26H2 빌드 26300, 2026-10-26)의 작업 표시줄과 작업 관리자는 **명시적이지만 등록되지 않은 AppUserModelID**를 가진 창의 아이콘을 창(WM_GETICON)·exe·RelaunchIconResource 어디에서도 가져오지 않고 기본 문서 아이콘을 그린다. docs/design-report.md §2의 "속성 저장소에서 읽는다"는 결론은 현재 재현되지 않아 **정정**(같은 OS 빌드 번호이지만 당시 캡처와 반대 — 월간 셸 업데이트 차이로 추정, UNVERIFIED).
+- 수정: `Services/AppId.cs`의 `SetCurrentProcessExplicitAppUserModelID` + 창 속성 저장소 기록을 **기본 비활성**(진단용 opt-in `NEXYS_AUMID=1`). 명시적 ID가 없으면 Windows가 exe 경로로 AUMID를 만들어 그룹·고정이 되고 exe에 박힌 아이콘을 쓴다.
+- 결과: 포터블·설치형 모두 정상 — 작업 표시줄 `final_portable_taskbar_zoom.png` / `final_installed_taskbar_zoom.png`, 작업 관리자 `final_portable_taskmgr.png`(행 "NexysView", NXS 아이콘) / `final_installed_taskmgr.png`, 전/후 비교 `cmp_taskmgr_rows.png`. (작업 관리자 행 이름도 "NexysView.exe" → 파일 설명 "NexysView"로 바뀜.)
+- 캡처 도구: `tools/capture_shell.ps1`(작업 표시줄 띠·Alt+Tab·작업 관리자). 작업 관리자는 자동 승격되면 입력·종료가 막히므로(UIPI) `runas /trustlevel:0x20000`으로 띄운다. 이미 떠 있는 인스턴스는 단일 인스턴스라 재사용되며 스크립트가 종료하지 못할 수 있음(수동으로 닫기).
+
+### b) 첫 실행 기본 테마 = 라이트
+- 설정 파일(`%LOCALAPPDATA%\NexysView\layout.json`)이 없으면 **라이트 크롬 + 다크 플롯**(`Engine.DefaultTheme`/`DefaultPlot` 상수 한 곳). 저장된 테마는 그대로 복원, 잘못된 값("light"/"dark" 외)은 기본값으로.
+- 검증용 `--fresh`: layout.json을 읽지도 쓰지도 않고 WebView2 프로필을 `WebView2-fresh`로 분리해 첫 실행과 같은 상태로 뜬다(사용자 설정 보호 규칙 유지). 캡처 `final_portable_screen.png`(포터블 `--fresh`, 창 제목 "Nexys VIEW 0.9.1 beta", 라이트).
+
+### c) 패키징 0.9.1
+
+| 항목 | 결과 |
+|---|---|
+| 버전 | 0.9.1-beta (Directory.Build.props, AppInfo 폴백, 설치 스크립트, LICENSE, README) |
+| 설치형 | `app/dist/NexysView-0.9.1-beta-setup.exe` 61.7 MB (61,739,076 B) |
+| 포터블 | `app/dist/NexysView-0.9.1-beta-portable.exe` 82.1 MB (82,140,684 B) |
+| 검증 | 무인 설치(`/VERYSILENT /CURRENTUSER /DIR=work\beta\install_test\0.9.1`, 종료 코드 0) → 설치본 실행·캡처 → 무인 언인스톨(종료 코드 0, 폴더·언인스톨 키 제거 확인). 테스트 514/514 (`work/bench/gate_tests_091.txt`) |

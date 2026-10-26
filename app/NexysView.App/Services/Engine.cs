@@ -29,8 +29,9 @@ public sealed class Engine
     public string? SelectedFile { get; set; }      // selected file name (navigator mode properties)
     public List<string> SelectedFiles { get; } = new();
     public Dictionary<string, bool> Hier { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public string Theme { get; set; } = "light";
-    public string Plot { get; set; } = "dark";
+    public const string DefaultTheme = "light", DefaultPlot = "dark";   // first start (no layout.json): light chrome, dark plot
+    public string Theme { get; set; } = DefaultTheme;
+    public string Plot { get; set; } = DefaultPlot;
     public bool Developer { get; set; }
     public string StatusText { get; private set; } = "";
     public string Led { get; private set; } = "idle";
