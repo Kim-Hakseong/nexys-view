@@ -1,0 +1,4 @@
+Pretendard (c) Kil Hyung-jin — SIL Open Font License 1.1 (https://github.com/orioncactus/pretendard)
+JetBrains Mono (c) JetBrains — SIL Open Font License 1.1 (https://github.com/JetBrains/JetBrainsMono)
+Lucide icons — ISC License (https://lucide.dev)
+Instrument Serif (c) 2022 The Instrument Serif Project Authors — SIL Open Font License 1.1 (https://github.com/Instrument/instrument-serif)

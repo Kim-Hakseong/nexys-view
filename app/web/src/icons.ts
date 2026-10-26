@@ -1,0 +1,34 @@
+// Inline SVG icons exactly as used in design/mockup (24-viewBox line icons, stroke 1.6).
+const wrap = (inner: string, size = 14, stroke = 'currentColor') =>
+  `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+
+export const I = {
+  folder: (s = 15) => wrap('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>', s),
+  folderW: (s = 14) => wrap('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>', s, '#fff'),
+  save: (s = 15) => wrap('<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><path d="M17 21v-8H7v8M7 3v5h8"></path>', s),
+  undo: (s = 15) => wrap('<path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-15-6.7L3 13"></path>', s),
+  redo: (s = 15) => wrap('<path d="M21 7v6h-6"></path><path d="M3 17a9 9 0 0 1 15-6.7L21 13"></path>', s),
+  theme: (s = 15) => wrap('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>', s),
+  sun: (s = 15) => wrap('<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>', s),
+  plot: (s = 15) => wrap('<path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path>', s),
+  info: (s = 15) => wrap('<circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path>', s),
+  list: (s = 14) => wrap('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>', s),
+  search: (s = 14) => wrap('<circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path>', s),
+  chev: (s = 12) => wrap('<path d="m9 18 6-6-6-6"></path>', s),
+  db: (s = 14) => wrap('<ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14a9 3 0 0 0 18 0V5"></path><path d="M3 12a9 3 0 0 0 18 0"></path>', s),
+  line: (s = 14) => wrap('<path d="M3 3v18h18"></path><path d="m7 15 4-6 4 3 5-7"></path>', s, '#5F5E5A'),
+  lineC: (s = 14) => wrap('<path d="M3 3v18h18"></path><path d="m7 15 4-6 4 3 5-7"></path>', s),
+  step: (s = 14) => wrap('<path d="M3 17h5V7h5v10h5V7h3"></path>', s, '#5F5E5A'),
+  text: (s = 14) => wrap('<path d="M4 7V4h16v3M9 20h6M12 4v16"></path>', s),
+  grip: (s = 14) => wrap('<circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="19" r="1"></circle>', s),
+  clock: (s = 12, c = '#fff') => wrap('<circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path>', s, c),
+  close: (s = 14) => wrap('<path d="M18 6 6 18M6 6l12 12"></path>', s),
+  sliders: (s = 14) => wrap('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"></path>', s),
+  tag: (s = 13) => wrap('<path d="M12 2H2v10l9.3 9.3a1 1 0 0 0 1.4 0l8.6-8.6a1 1 0 0 0 0-1.4z"></path><path d="M7 7h.01"></path>', s, '#5F5E5A'),
+  clockM: (s = 13) => wrap('<circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path>', s, '#5F5E5A'),
+  lineM: (s = 13) => wrap('<path d="M3 3v18h18"></path><path d="m7 15 4-6 4 3 5-7"></path>', s, '#5F5E5A'),
+  play: (s = 14) => wrap('<path d="m6 4 14 8-14 8z"></path>', s, '#fff'),
+  table: (s = 14) => wrap('<path d="M3 5h18v14H3zM3 10h18M3 15h18M9 5v14M15 5v14"></path>', s),
+  file: (s = 14) => wrap('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6"></path>', s),
+  check: (s = 12) => wrap('<path d="m5 12 5 5L20 7"></path>', s),
+};

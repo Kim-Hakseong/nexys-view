@@ -1,0 +1,10 @@
+<Window x:Class="NexysView.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="Nexys VIEW" Width="1440" Height="900" MinWidth="960" MinHeight="600" Background="#ECEAE5" UseLayoutRounding="True">
+    <Grid>
+        <wv2:WebView2 x:Name="Web"/>
+        <TextBlock x:Name="Boot" Text="" Foreground="#5F5E5A" FontSize="12" Margin="16" VerticalAlignment="Top" HorizontalAlignment="Left" IsHitTestVisible="False"/>
+    </Grid>
+</Window>

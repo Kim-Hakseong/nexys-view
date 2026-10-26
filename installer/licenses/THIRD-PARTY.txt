@@ -1,0 +1,12 @@
+Nexys VIEW — third-party components and licenses
+
+Fonts (bundled, SIL Open Font License 1.1 — full texts in this folder):
+  Inter — Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter) — OFL-Inter.txt
+  Noto Sans KR — Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source' (https://github.com/notofonts/noto-cjk) — OFL-NotoSansKR.txt
+  Instrument Serif — Copyright 2022 The Instrument Serif Project Authors (https://github.com/Instrument/instrument-serif) — OFL-InstrumentSerif.txt
+  JetBrains Mono — Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono) — OFL-JetBrainsMono.txt
+  Pretendard — Copyright (c) 2021 Kil Hyung-jin (https://github.com/orioncactus/pretendard) — OFL (report rendering)
+
+Icons: Lucide — ISC License (https://lucide.dev)
+Libraries: SkiaSharp (MIT, https://github.com/mono/SkiaSharp) · Microsoft.Web.WebView2 (Microsoft Software License Terms) · Microsoft.Diagnostics.Runtime (MIT) · .NET 8 runtime (MIT)
+Microsoft Edge WebView2 Runtime (Evergreen) is installed by the setup when missing; it is distributed under Microsoft's license terms.

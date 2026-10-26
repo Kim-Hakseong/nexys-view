@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>NexysView</AssemblyName>
+    <RootNamespace>NexysView.App</RootNamespace>
+    <ApplicationIcon>Assets\brand\AppIcon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <StartupObject>NexysView.App.Program</StartupObject>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="3.1.456101" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="SkiaSharp" Version="3.119.0" />
+    <ProjectReference Include="..\NexysView.Core\NexysView.Core.csproj" />
+    <ProjectReference Include="..\NexysView.Render\NexysView.Render.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\fonts\*.ttf" />
+    <Resource Include="Assets\brand\AppIcon.ico" />
+    <Content Include="..\web\dist\**\*" Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\branding.json" Link="branding.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\NexysView.PluginHost\bin\NexysView.PluginHost.exe" Link="NexysView.PluginHost.exe" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\NexysView.PluginHost\bin\NexysView.PluginHost.exe')" />
+    <None Include="Assets\fonts\LICENSES.txt" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Assets\fonts\LICENSES.txt')" />
+  </ItemGroup>
+</Project>

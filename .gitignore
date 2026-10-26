@@ -1,0 +1,22 @@
+# build output
+bin/
+obj/
+dist/
+*.user
+*.pdb
+.vs/
+# web
+node_modules/
+app/web/dist/
+# third-party binaries / redistributables (downloaded at build time)
+installer/redist/
+*.dll
+*.exe
+*.lib
+# local data and caches
+*.nvcache
+work/
+ref/
+poc/
+# app runtime files
+layout.json
