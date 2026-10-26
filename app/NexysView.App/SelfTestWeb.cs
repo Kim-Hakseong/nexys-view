@@ -33,7 +33,7 @@ public static partial class SelfTest
         var e = w.Engine; string root = TdmsRoot(); string bench = Path.Combine(root, "work", "bench");
         e.Theme = "light"; e.Plot = "dark"; e.Touch();
         G("memory_ws_start_mb", Process.GetCurrentProcess().WorkingSet64 / 1048576.0, "MB", null, "181");
-        G("memory_webview_start_mb", WebViewMemoryMb(), "MB");
+        G("memory_webview_start_mb", await WebViewMemoryMbAsync(), "MB");
         var sw = Stopwatch.StartNew();
         foreach (var f in new[] { "bench1_10ch_10M.tdms", "bench2_1GB_16ch_8M.tdms", "bench3_10000ch.tdms" })
         {
@@ -128,7 +128,7 @@ public static partial class SelfTest
         GC.Collect(2, GCCollectionMode.Aggressive, blocking: true, compacting: true); GC.WaitForPendingFinalizers(); GC.Collect(2, GCCollectionMode.Aggressive, blocking: true, compacting: true); await Task.Delay(500);
         G("memory_ws_mb", Process.GetCurrentProcess().WorkingSet64 / 1048576.0, "MB", "<=500", "485 (wpf)");
         G("memory_private_mb", Process.GetCurrentProcess().PrivateMemorySize64 / 1048576.0, "MB");
-        G("memory_webview_mb", WebViewMemoryMb(), "MB");
+        G("memory_webview_mb", await WebViewMemoryMbAsync(), "MB");
         foreach (var f in e.State.Files.ToList()) e.CloseFile(f.Name);
         foreach (var c in e.Charts.ToList()) e.RemoveChart(c.Id, false);
         GC.Collect(2, GCCollectionMode.Aggressive, blocking: true, compacting: true); GC.WaitForPendingFinalizers(); await Task.Delay(500);
@@ -136,8 +136,10 @@ public static partial class SelfTest
         L("SELFTEST DONE");
     }
 
+    static Task<int> WebViewProcessCountAsync() => Task.Run(() => { int n = 0; foreach (var p in Process.GetProcessesByName("msedgewebview2")) { try { if (IsChildOfUs(p)) n++; } catch { } p.Dispose(); } return n; });
     /// <summary>Working set of the WebView2 (msedgewebview2) processes spawned for this app's user-data folder.</summary>
-    static double WebViewMemoryMb() => Task.Run(WebViewMemoryMbCore).GetAwaiter().GetResult();
+    /// <summary>WMI per process is slow (seconds): always awaited off the UI thread (a synchronous wait stalled the UI 6 s in --stress).</summary>
+    static Task<double> WebViewMemoryMbAsync() => Task.Run(WebViewMemoryMbCore);
     static double WebViewMemoryMbCore()
     {
         try
@@ -312,7 +314,7 @@ public static partial class SelfTest
         G("startup_max_ui_stall_ms", Diag.MaxStallMs, "ms");
         foreach (var f in files) e.OpenFile(f);
         await JS(w, "await nx.test.settle(); return true;"); await Idle(w, 1500); Diag.ResetStats();
-        GC.Collect(); long ws0 = WsMb(); int exceptions = 0, drops = 0, closes = 0; var modes = e.ShowLegacyTabs ? new[] { "NAVIGATOR", "VIEW", "ANALYSIS", "REPORT" } : new[] { "NAVIGATOR", "VIEW" };
+        GC.Collect(); long ws0 = WsMb(); int exceptions = 0, drops = 0, closes = 0, windowsOpened = 0; int wvProc0 = await WebViewProcessCountAsync(); var modes = e.ShowLegacyTabs ? new[] { "NAVIGATOR", "VIEW", "ANALYSIS", "REPORT" } : new[] { "NAVIGATOR", "VIEW" };
         for (int it = 0; it < iters; it++)
         {
             try
@@ -324,6 +326,14 @@ public static partial class SelfTest
                 int chart = await ActiveChart(w);
                 foreach (var c in pick.Skip(1)) { await JS(w, $"await nx.test.drop({Chans(c)}, {{chart: {chart}}}); return true;"); drops++; await Pause(w); }
                 await JS(w, $"await nx.test.wheel({chart}, 3); await nx.test.click({chart}, 0.4); return true;");
+                if (it % 4 == 3)
+                {
+                    // 0.9.4: detach the chart to a window, pan it there, close the window (chart returns)
+                    await JS(w, $"await nx.test.menu({chart}, 'detach'); return true;");
+                    var cw = await WaitWindow(w, 1, 20000);
+                    if (cw != null) { windowsOpened++; try { await cw.Bridge!.RunTest($"await nx.test.settle(); await nx.test.pan({chart}, 2); return true;", 20000); } catch (Exception ex) { L($"iter {it}: window pan {ex.Message}"); } w.CloseChartWindow(cw.Id); await Pause(w); }
+                    else L($"iter {it}: chart window did not open");
+                }
                 await JS(w, $"await nx.test.clickSel('[data-chart=\"{chart}\"] [data-act=close]'); return true;"); closes++;
                 if (it % 10 == 9)
                 {
@@ -337,7 +347,8 @@ public static partial class SelfTest
         GC.Collect(2, GCCollectionMode.Aggressive, blocking: true, compacting: true); GC.WaitForPendingFinalizers(); await Task.Delay(300);
         G("stress_iterations", iters, ""); G("stress_drops", drops, ""); G("stress_chart_closes", closes, "");
         G("stress_exceptions", exceptions, "", "=0"); G("stress_ui_stalls_300ms", Diag.StallCount, "", "=0"); G("stress_max_ui_stall_ms", Diag.MaxStallMs, "ms", "<=200");
-        G("stress_mem_growth_mb", WsMb() - ws0, "MB", "<=100"); G("stress_webview_mb", WebViewMemoryMb(), "MB"); G("stress_total_s", sw.Elapsed.TotalSeconds, "s");
+        G("stress_mem_growth_mb", WsMb() - ws0, "MB", "<=100"); G("stress_webview_mb", await WebViewMemoryMbAsync(), "MB"); G("stress_total_s", sw.Elapsed.TotalSeconds, "s");
+        G("stress_windows_opened", windowsOpened, "", "=50"); G("stress_windows_left", w.Windows.Count, "", "=0"); G("stress_webview_processes_delta", await WebViewProcessCountAsync() - wvProc0, "", "<=1");
         await Shot(w, "stress_end");
     }
 

@@ -10,6 +10,8 @@ namespace NexysView.App.Services;
 public static class LayoutStore
 {
     public sealed class CurveDto { public string Channel { get; set; } = ""; public string? X { get; set; } public bool XMono { get; set; } public double XScale { get; set; } = 1; public double XOffset { get; set; } public bool Step { get; set; } public double Width { get; set; } = 1; public bool Points { get; set; } public string AxisId { get; set; } = ""; public int Color { get; set; } public bool Visible { get; set; } = true; public bool RightAxis { get; set; } }
+    public sealed class PageDto { public int Id { get; set; } public string Name { get; set; } = ""; public int Columns { get; set; } = 1; }
+    public sealed class WindowDto { public int Id { get; set; } public double X { get; set; } public double Y { get; set; } public double W { get; set; } public double H { get; set; } }
     public sealed class AxisDto { public string Id { get; set; } = ""; public string Unit { get; set; } = ""; public bool Right { get; set; } public bool Auto { get; set; } = true; public double Min { get; set; } public double Max { get; set; } public bool Log { get; set; } }
     public sealed class PlotDto
     {
@@ -37,6 +39,13 @@ public static class LayoutStore
         /// <summary>0.9.3: show the ANALYSIS / REPORT tabs again (hidden by default).</summary>
         public bool ShowLegacyTabs { get; set; }
         public string DropMode { get; set; } = "unit";
+        // 0.9.4
+        public List<PageDto> Pages { get; set; } = new();
+        public int ActivePage { get; set; } = 1;
+        public bool AutoPage { get; set; } = true;
+        public int AutoPageN { get; set; } = 4;
+        /// <summary>Rectangles of chart windows by window id (reused when a window with that id is opened again; off-screen rects fall back to the main screen).</summary>
+        public List<WindowDto> Windows { get; set; } = new();
         public Dictionary<string, bool> TreeHierarchy { get; set; } = new();
         public string Mode { get; set; } = "VIEW";
     }
@@ -55,6 +64,8 @@ public static class LayoutStore
             {
                 Version = AppInfo.Version, Theme = e.Theme, Plot = e.Plot, W = w.Width, H = w.Height, X = w.Left, Y = w.Top, Maximized = w.WindowState == WindowState.Maximized,
                 Files = e.State.Files.Where(f => File.Exists(f.Path)).Select(f => f.Path).ToList(), Developer = e.Developer, TourSeen = e.TourSeen, ShowLegacyTabs = e.ShowLegacyTabs, DropMode = e.DropMode, Mode = e.Mode,
+                Pages = e.Pages.Select(p => new PageDto { Id = p.Id, Name = p.Name, Columns = p.Columns }).ToList(), ActivePage = e.ActivePage, AutoPage = e.AutoPage, AutoPageN = e.AutoPageN,
+                Windows = w.WindowRects(),
                 TreeHierarchy = new Dictionary<string, bool>(e.Hier),
             };
             foreach (var p in e.Charts)
@@ -88,9 +99,12 @@ public static class LayoutStore
             if (d == null) return;
             var e = w.Engine;
             e.Theme = d.Theme is "light" or "dark" ? d.Theme : Engine.DefaultTheme; e.Plot = d.Plot is "light" or "dark" ? d.Plot : Engine.DefaultPlot;
-            if (!double.IsNaN(d.X) && d.W > 300) { w.Left = d.X; w.Top = d.Y; w.Width = d.W; w.Height = d.H; }
+            if (SelfTest.Enabled) return;   // automation runs start from an empty workspace with the default window size
+            if (!double.IsNaN(d.X) && d.W > 300 && ChartWindow.OnAScreen(new Rect(d.X, d.Y, d.W, d.H))) { w.Left = d.X; w.Top = d.Y; w.Width = d.W; w.Height = d.H; }
             if (d.Maximized) w.WindowState = WindowState.Maximized;
-            if (SelfTest.Enabled) return;   // automation runs start from an empty workspace
+            if (d.Pages.Count > 0) { e.Pages.Clear(); foreach (var p in d.Pages) e.Pages.Add(new Engine.Page { Id = p.Id, Name = p.Name, Columns = p.Columns == 2 ? 2 : 1 }); e.ActivePage = e.Pages.Any(p => p.Id == d.ActivePage) ? d.ActivePage : e.Pages[0].Id; e.ResetPageCounter(); }
+            e.AutoPage = d.AutoPage; e.AutoPageN = Math.Clamp(d.AutoPageN, 1, 32);
+            w.SavedWindowRects = d.Windows.ToDictionary(x => x.Id, x => new Rect(x.X, x.Y, x.W, x.H));
             foreach (var kv in d.TreeHierarchy) e.Hier[kv.Key] = kv.Value;
             // 0.9.2 (beta feedback): the previous session's files and charts are NOT reopened — a start shows the built-in sample
             // (SampleData) or the files given on the command line. Files/Plots are still saved for a future "restore session" option.

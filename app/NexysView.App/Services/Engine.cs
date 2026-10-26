@@ -12,6 +12,9 @@ public sealed class Chart
     public PlotModel Model { get; } = new();
     /// <summary>0.9.3: id of the overview chart this chart is the detail of (its x window = the overview's band).</summary>
     public int? DetailOf { get; set; }
+    /// <summary>0.9.4: page of the main window this chart belongs to; window 0 = main, N = a detached chart window.</summary>
+    public int PageId { get; set; } = 1;
+    public int WindowId { get; set; }
     public Chart(int id) { Id = id; }
 }
 
@@ -37,6 +40,15 @@ public sealed class Engine
     public bool Developer { get; set; }
     /// <summary>Feature tour finished or skipped once (layout.json); false on a first start → the page auto-starts the tour.</summary>
     public bool TourSeen { get; set; }
+    // ---- 0.9.4: pages of the main window, detached chart windows
+    public sealed class Page { public int Id; public string Name = ""; public int Columns = 1; }
+    public List<Page> Pages { get; } = new() { new Page { Id = 1, Name = "Page 1" } };
+    int _nextPage = 2;
+    public int ActivePage { get; set; } = 1;
+    public bool AutoPage { get; set; } = true;
+    public int AutoPageN { get; set; } = 4;
+    /// <summary>Open chart windows (id → title); charts carry <see cref="Chart.WindowId"/>. Managed by the host.</summary>
+    public Dictionary<int, string> Windows { get; } = new();
     /// <summary>0.9.3: ANALYSIS / REPORT tabs are hidden unless layout.json says showLegacyTabs=true (engine and commands stay).</summary>
     public bool ShowLegacyTabs { get; set; }
     /// <summary>0.9.3: file/group drop rule — "unit" (one chart, y axis per unit, steps as lanes) or "each" (a chart per channel).</summary>
@@ -133,9 +145,14 @@ public sealed class Engine
     public Chart? Get(int id) => id == 0 ? Preview : Charts.FirstOrDefault(c => c.Id == id);
 
     // ------------------------------------------------------------------ charts
-    public Chart AddChart(bool record = true, int at = -1)
+    public Chart AddChart(bool record = true, int at = -1, int? pageId = null)
     {
         var ch = new Chart(_nextId++);
+        if (pageId == null && AutoPage && Pages.Any(p => p.Id == ActivePage) && Charts.Count(c => c.PageId == ActivePage && c.WindowId == 0) >= Math.Max(1, AutoPageN))
+        {
+            var np = AddPage(null, false); ActivePage = np.Id; SetStatus($"Page {Pages.Count} created (auto split after {AutoPageN} charts)");
+        }
+        ch.PageId = pageId ?? ActivePage;
         if (at < 0 || at > Charts.Count) Charts.Add(ch); else Charts.Insert(at, ch);
         ActiveChart = ch.Id;
         if (record) State.Undo.Push("New chart", () => RemoveChart(ch.Id, false), () => { if (!Charts.Contains(ch)) { Charts.Add(ch); Changed?.Invoke(); } });
@@ -326,7 +343,7 @@ public sealed class Engine
         if (m.CursorMode != "band" || !m.BandEnabled) { m.CursorMode = "band"; if (!m.BandEnabled) { double w = m.XMax - m.XMin; m.BandEnabled = true; m.BandX0 = m.XMin + w * 0.4; m.BandX1 = m.XMin + w * 0.6; } }
         var existing = Charts.FirstOrDefault(c => c.DetailOf == ov.Id);
         if (existing != null) { SetDetailChannel(existing.Id, src.Channel.Id); return existing; }
-        var d = AddChart(record: true, at: Charts.IndexOf(ov) + 1); d.DetailOf = ov.Id;
+        var d = AddChart(record: true, at: Charts.IndexOf(ov) + 1, pageId: ov.PageId); d.DetailOf = ov.Id; d.WindowId = ov.WindowId;
         var dm = d.Model; dm.Title = "Detail · " + src.Channel.Name; dm.LinkX = false;
         var cv = dm.AddCurve(src.Channel, null); CopyX(src, cv, m, dm); cv.Step = src.Step; cv.ColorIndex = src.ColorIndex; cv.Width = src.Width;
         dm.XMin = m.BandX0; dm.XMax = m.BandX1;
@@ -598,10 +615,52 @@ public sealed class Engine
     public List<DataFile> FilesByName(IEnumerable<string> names) => names.Select(n => State.Files.FirstOrDefault(f => f.Name == n)).Where(f => f != null).Select(f => f!).ToList();
 
     // ------------------------------------------------------------------ value tables
-    public sealed class Table { public int Id; public List<Channel> Channels = new(); }
+    public sealed class Table { public int Id; public List<Channel> Channels = new(); public int PageId = 1; }
     public List<Table> Tables { get; } = new();
     int _nextTable = 1;
-    public Table AddTable() { var t = new Table { Id = _nextTable++ }; Tables.Add(t); Changed?.Invoke(); return t; }
+    public Table AddTable() { var t = new Table { Id = _nextTable++, PageId = ActivePage }; Tables.Add(t); Changed?.Invoke(); return t; }
+
+    // ------------------------------------------------------------------ 0.9.4: pages
+    public Page AddPage(string? name = null, bool select = true)
+    {
+        var p = new Page { Id = _nextPage++, Name = name ?? $"Page {Pages.Count + 1}", Columns = Pages.LastOrDefault()?.Columns ?? 1 };
+        Pages.Add(p); if (select) ActivePage = p.Id; Changed?.Invoke(); return p;
+    }
+    public void ResetPageCounter() { _nextPage = Pages.Count == 0 ? 2 : Pages.Max(p => p.Id) + 1; }
+    public void RenamePage(int id, string name) { var p = Pages.FirstOrDefault(x => x.Id == id); if (p == null || string.IsNullOrWhiteSpace(name)) return; p.Name = name.Trim(); Changed?.Invoke(); }
+    public void MovePageTo(int id, int index) { var p = Pages.FirstOrDefault(x => x.Id == id); if (p == null) return; Pages.Remove(p); Pages.Insert(Math.Clamp(index, 0, Pages.Count), p); Changed?.Invoke(); }
+    public void MovePage(int id, int dir) { int i = Pages.FindIndex(x => x.Id == id), j = i + dir; if (i < 0 || j < 0 || j >= Pages.Count) return; (Pages[i], Pages[j]) = (Pages[j], Pages[i]); Changed?.Invoke(); }
+    /// <summary>Remove a page; its charts and tables move to the first remaining page (nothing is deleted).</summary>
+    public void RemovePage(int id)
+    {
+        if (Pages.Count <= 1) { SetStatus("The last page cannot be removed"); return; }
+        var p = Pages.FirstOrDefault(x => x.Id == id); if (p == null) return;
+        Pages.Remove(p); var target = Pages[0];
+        int moved = 0; foreach (var c in Charts.Where(c => c.PageId == id)) { c.PageId = target.Id; moved++; } foreach (var t in Tables.Where(t => t.PageId == id)) t.PageId = target.Id;
+        if (ActivePage == id) ActivePage = target.Id;
+        if (moved > 0) SetStatus($"{moved} chart(s) moved to {target.Name}");
+        Changed?.Invoke();
+    }
+    public void SelectPage(int id) { if (Pages.Any(p => p.Id == id)) { ActivePage = id; var first = Charts.FirstOrDefault(c => c.PageId == id && c.WindowId == 0); if (first != null) ActiveChart = first.Id; Changed?.Invoke(); } }
+    public void SetPageColumns(int id, int n) { var p = Pages.FirstOrDefault(x => x.Id == id); if (p == null) return; p.Columns = n == 2 ? 2 : 1; Changed?.Invoke(); }
+    public void SetAutoPage(bool on, int n) { AutoPage = on; AutoPageN = Math.Clamp(n, 1, 32); Changed?.Invoke(); }
+    public void MoveChartToPage(int chartId, int pageId) { var c = Get(chartId); if (c == null || c.Id == 0 || !Pages.Any(p => p.Id == pageId)) return; c.PageId = pageId; Changed?.Invoke(); }
+
+    // ------------------------------------------------------------------ 0.9.4: chart windows (the host creates/closes the WPF windows)
+    public void DetachChart(int chartId, int windowId, string title)
+    {
+        var c = Get(chartId); if (c == null || c.Id == 0) return;
+        Windows[windowId] = title; c.WindowId = windowId;
+        foreach (var d in Charts.Where(x => x.DetailOf == chartId)) d.WindowId = windowId;   // a detail follows its overview
+        Changed?.Invoke(); ChartChanged?.Invoke(chartId);
+    }
+    public void ReturnChart(int chartId) { var c = Get(chartId); if (c == null) return; c.WindowId = 0; foreach (var d in Charts.Where(x => x.DetailOf == chartId)) d.WindowId = 0; Changed?.Invoke(); ChartChanged?.Invoke(chartId); }
+    /// <summary>Window closed by the user: every chart in it returns to the main window (nothing is deleted).</summary>
+    public int CloseWindow(int windowId)
+    {
+        int n = 0; foreach (var c in Charts.Where(c => c.WindowId == windowId)) { c.WindowId = 0; n++; }
+        Windows.Remove(windowId); Changed?.Invoke(); ChartChanged?.Invoke(-1); return n;
+    }
     public void RemoveTable(int id) { Tables.RemoveAll(t => t.Id == id); Changed?.Invoke(); }
     public void TableAdd(int id, string channelId) { var t = Tables.FirstOrDefault(x => x.Id == id); var c = Find(channelId); if (t != null && c != null && !t.Channels.Contains(c)) { t.Channels.Add(c); Changed?.Invoke(); } }
     public object? TableRows(int id, long first, int count)
@@ -633,6 +692,8 @@ public sealed class Engine
         return new
         {
             theme = Theme, plot = Plot, mode = Mode, developer = Developer, legacyTabs = ShowLegacyTabs, dropMode = DropMode,
+            pages = Pages.Select(p => new { id = p.Id, name = p.Name, columns = p.Columns, charts = Charts.Count(c => c.PageId == p.Id && c.WindowId == 0) }).ToList(), activePage = ActivePage, autoPage = new { on = AutoPage, n = AutoPageN },
+            windows = Windows.Select(kv => new { id = kv.Key, title = kv.Value, charts = Charts.Count(c => c.WindowId == kv.Key) }).ToList(),
             app = new { version = AppInfo.Version, versionText = AppInfo.VersionText, beta = AppInfo.IsBeta, repo = AppInfo.Repo, issues = AppInfo.Issues, tourSeen = TourSeen, automation = SelfTest.Enabled },
             status = new { text = StatusText, led = Led },
             undo = new { can = State.Undo.CanUndo, name = State.Undo.UndoName, canRedo = State.Undo.CanRedo },
@@ -645,7 +706,7 @@ public sealed class Engine
             analysis = Analysis.Dto(),
             report = Report.Dto(),
             preview = Preview.Model.Curves.Count > 0 ? ChartDto(Preview) : null,
-            tables = Tables.Select(t => new { id = t.Id, channels = t.Channels.Select(c => new { id = c.Id, name = c.Name, unit = c.Unit, length = c.Length }).ToList(), rows = t.Channels.Count == 0 ? 0 : t.Channels.Max(c => c.Length), cursorRow = CursorRowOf(t) }).ToList(),
+            tables = Tables.Select(t => new { id = t.Id, pageId = t.PageId, channels = t.Channels.Select(c => new { id = c.Id, name = c.Name, unit = c.Unit, length = c.Length }).ToList(), rows = t.Channels.Count == 0 ? 0 : t.Channels.Max(c => c.Length), cursorRow = CursorRowOf(t) }).ToList(),
             cache = new { ready = State.Files.SelectMany(f => f.AllChannels).Count(c => c.Pyramid != null), total = State.Files.Sum(f => f.ChannelCount), mb = State.Files.SelectMany(f => f.AllChannels).Sum(c => c.Pyramid?.MemoryBytes ?? 0) / 1048576.0 },
         };
     }
@@ -688,6 +749,8 @@ public sealed class Engine
             alignMode = m.AlignMode, alignOffsetMs = m.AlignOffsetMs, grid = m.ShowGrid, legend = m.ShowLegend, isXY = m.IsXY,
             cursorMode = m.CursorMode, band = new { on = m.BandEnabled, x0 = m.BandX0, x1 = m.BandX1, label0 = m.BandEnabled ? fr.FormatX(m, m.BandX0, m.XTimeMode != "none" ? 0.001 : 0) : "", label1 = m.BandEnabled ? fr.FormatX(m, m.BandX1, m.XTimeMode != "none" ? 0.001 : 0) : "" },
             linkX = m.LinkX, linkKey = LinkKey(chart), detailOf = chart.DetailOf is int dov && Get(dov) != null ? dov : (int?)null, hasDetail = Charts.Any(c => c.DetailOf == chart.Id), zoomHistory = m.ZoomHistory.Count,
+            detailOfName = chart.DetailOf is int dn && Get(dn) is { } och ? (string.IsNullOrEmpty(och.Model.Title) ? "Chart " + (Charts.IndexOf(och) + 1) : och.Model.Title) : null,
+            pageId = chart.PageId, windowId = chart.WindowId,
             axes = m.YAxes.Select(a => new { id = a.Id, unit = a.Unit, right = a.Right, auto = a.Auto, min = a.Min, max = a.Max, log = a.Log, curves = m.Curves.Count(c => c.Axis == a) }).ToList(),
             cursorA = new { on = m.CursorA.Enabled, x = m.CursorA.X, label = m.CursorA.Enabled ? fr.FormatX(m, m.CursorA.X) : "" },
             cursorB = new { on = m.CursorB.Enabled, x = m.CursorB.X, label = m.CursorB.Enabled ? fr.FormatX(m, m.CursorB.X) : "" },

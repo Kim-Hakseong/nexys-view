@@ -4,7 +4,7 @@
 
 **측정 데이터 뷰어 — TDMS·TDM 로그를 열고, 1,000만 샘플 곡선을 16 ms 안에 움직이고, 밴드로 고른 구간을 상세 차트에서 바로 본다.**
 
-![version](https://img.shields.io/badge/version-0.9.3--beta-7A1020) ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-17181A) ![runtime](https://img.shields.io/badge/.NET-8.0%20self--contained-5F5E5A) ![ui](https://img.shields.io/badge/UI-WebView2-5F5E5A)
+![version](https://img.shields.io/badge/version-0.9.4--beta-7A1020) ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-17181A) ![runtime](https://img.shields.io/badge/.NET-8.0%20self--contained-5F5E5A) ![ui](https://img.shields.io/badge/UI-WebView2-5F5E5A)
 
 C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 렌더 · 단위 테스트 514개
 
@@ -17,7 +17,7 @@ C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 렌더 �
 ## 설치와 실행
 
 ### 설치형 (권장)
-1. [Releases](https://github.com/Kim-Hakseong/nexys-view/releases)에서 `NexysView-0.9.3-beta-setup.exe`를 받아 실행한다.
+1. [Releases](https://github.com/Kim-Hakseong/nexys-view/releases)에서 `NexysView-0.9.4-beta-setup.exe`를 받아 실행한다.
 2. Program Files에 설치되고 시작 메뉴·바탕화면 바로가기가 만들어진다. `.tdms` / `.tdm` / `.dxd` 연결은 설치 중 선택(기본 해제).
 3. Microsoft Edge WebView2 런타임이 없는 PC에서는 설치 중에 자동으로 받아 설치한다(인터넷 필요). Windows 11과 최신 Windows 10에는 이미 들어 있다.
 
@@ -59,6 +59,15 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 - X축이 시간 채널이면 눈금이 `mm:ss.fff`(상대) 또는 `HH:mm:ss`(절대, 1904 epoch)로 바뀌고 커서 값은 원본 샘플을 읽는다. 정수·불리언·값이 8개 이하인 채널은 자동으로 계단으로 그려지고, **DIGITAL LANES**를 켜면 플롯 아래 0/1 레인으로 쌓인다.
 - 범례 클릭 = 숨김(상세가 연결된 개요에서는 상세 채널 선택, `Shift`+클릭 = 숨김), 범례 드래그 = 다른 차트로 이동, 헤더 그립 드래그 = 차트 순서 교환.
 
+### 페이지와 여러 창
+[![여러 창](docs/images/main_window.png)](docs/images/main_window.png)
+- **페이지**: VIEW 위의 탭(Page 1, +)으로 차트를 나눠 둔다. 클릭 = 보기, 더블클릭 = 이름 바꾸기, 드래그 = 순서, × = 제거(차트는 다른 페이지로 옮겨지며 삭제되지 않음, 차트가 있으면 확인). `Ctrl+PageDown` / `Ctrl+PageUp`으로 이동.
+- **GRID 1 COL / 2 COL**: 페이지의 차트 격자. 차트 헤더 그립 드래그로 순서를 바꾼다. **AUTO PAGE ON n**: 차트가 n개(기본 4)를 넘으면 새 페이지가 자동으로 생긴다.
+- **새 창으로**: 차트 메뉴(⋯) → 새 창으로, 또는 헤더 그립을 창 밖으로 드래그. 차트가 별도 창(WebView2)으로 옮겨지고 같은 세션을 공유하므로 X축 링크·밴드·개요/상세·커서가 창을 넘어 함께 움직인다. 창을 닫거나 **RETURN ALL**을 누르면 차트는 주 창으로 돌아온다(삭제 아님). 창 위치·크기는 레이아웃에 저장되고, 그 모니터가 없으면 주 모니터에 연다.
+
+[![떼어낸 창](docs/images/window.png)](docs/images/window.png)
+[![페이지 2열](docs/images/pages.png)](docs/images/pages.png)
+
 ### PROPERTIES — 축·곡선 설정
 - **Y축**: AUTO / MANUAL(min·max 입력), LOG, LEFT / RIGHT. 단위별로 축을 공유하고 곡선마다 SHARED / OWN으로 분리할 수 있다.
 - **곡선**: LINE / STEP / POINTS, 굵기 1·1.5·2, 색 8가지, 숨김. GRID on/off. 모든 설정은 레이아웃에 저장된다.
@@ -73,8 +82,8 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 
 ### 도움말과 기능 투어
 [![기능 투어](docs/images/tour.png)](docs/images/tour.png)
-- 처음 실행하면 **기능 투어**가 자동으로 시작된다. 9단계로 화면 탭 → 파일 열기 → 채널 트리 → 차트 → 속성 → 밴드·상세 → 줌·내보내기 → 도움말 순서로 해당 영역을 비추며 설명한다. `다음 →`/`이전`/`건너뛰기`, 키보드 `→` `←` `Esc`. 한 번 끝내거나 건너뛰면 다시 자동으로 뜨지 않는다.
-- 헤더 오른쪽 **?** 버튼이나 `F1`로 **사용 가이드**가 열린다. 시작하기 · 화면 구성 · 차트 조작 · 밴드·상세 보기 · 테이블·내보내기 · 단축키 · 활용 팁 절과 **"기능 투어 다시 보기"** 버튼이 있다.
+- 처음 실행하면 **기능 투어**가 자동으로 시작된다. 10단계로 화면 버튼 → 파일 열기 → 채널 트리 → 차트 → 속성 → 밴드·상세 → 페이지·창 → 줌·내보내기 → 도움말 순서로 해당 영역을 비추며 설명한다. `다음 →`/`이전`/`건너뛰기`, 키보드 `→` `←` `Esc`. 한 번 끝내거나 건너뛰면 다시 자동으로 뜨지 않는다.
+- 헤더 오른쪽 **?** 버튼이나 `F1`로 **사용 가이드**가 열린다. 시작하기 · 화면 구성(페이지·여러 창 포함) · 차트 조작 · 밴드·상세 보기 · 테이블·내보내기 · 단축키 · 활용 팁 절과 **"기능 투어 다시 보기"** 버튼이 있다.
 
 [![사용 가이드](docs/images/help.png)](docs/images/help.png)
 
@@ -82,13 +91,13 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 
 ## 주요 기능
 - **큰 파일**: 1 GB TDMS를 수 ms에 열고(메모리 맵), 채널마다 min/max 피라미드를 만들어 1,000만 샘플 곡선 10개를 한 화면에서 끊김 없이 팬·줌한다. 피라미드는 파일 옆 `.nvcache`에 저장돼 다음에 바로 쓴다.
-- **탐색 도구에 집중**: 화면은 NAVIGATOR와 VIEW 둘. 그룹 드롭 → 차트, 오른쪽 드래그 줌, 밴드 커서, 개요/상세 연동, X축 링크, 값 테이블, CSV/TDMS/PNG 내보내기. (ANALYSIS·REPORT 탭은 설정 파일 `%LOCALAPPDATA%\NexysView\layout.json`의 `ShowLegacyTabs: true`로만 표시)
+- **탐색 도구에 집중**: 화면은 툴바 첫 그룹의 NAVIGATOR와 VIEW 둘(활성 화면은 배경 톤과 밑줄). 그룹 드롭 → 차트, 오른쪽 드래그 줌, 밴드 커서, 개요/상세 연동, X축 링크, 값 테이블, CSV/TDMS/PNG 내보내기, **페이지**와 **여러 창**. (ANALYSIS·REPORT 탭은 설정 파일 `%LOCALAPPDATA%\NexysView\layout.json`의 `ShowLegacyTabs: true`로만 표시)
 - **시간축 로그**: `System Time`/`Absolute Time` 같은 시간 채널 자동 인식 → 시간축 제안(USE … AS X), 상대/절대 시각 눈금, 계단 신호 + 디지털 레인, 이름 계층 트리(`A.B.C`), 로그 여러 개를 시작 시각으로 정렬해 비교.
 - **형식**: TDMS(2.0, 세그먼트 10만 개 파일 포함) · TDM/TDX · CSV/TXT(자동 감지) · DXD(배포본) · VBS/Python/SDK DataPlugin(`Ctrl+Shift+O`) · TDMS 저장(`Ctrl+S`) · 레이아웃 파일(.tdv) 가져오기.
 - **라이트/다크 테마**, 밝은 플롯(점 격자) 옵션, 창 크기·테마·모드·축/곡선 설정 복원(파일·차트는 다시 열지 않음), Undo/Redo.
 
 ## 성능 (같은 PC, 기준 상용 분석 도구와 비교)
-| 항목 | Nexys VIEW 0.9.3 beta | 기준 상용 도구 |
+| 항목 | Nexys VIEW 0.9.4 beta | 기준 상용 도구 |
 |---|---|---|
 | 1 GB TDMS 열기 (16 ch × 8M) | 6 ms | 29 ms |
 | 10M 샘플 첫 곡선 표시 (드롭 → 피라미드 → 첫 프레임) | 0.35 s | 1.06 s |
@@ -96,9 +105,10 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 | 10,000 채널 파일 열기 + 트리 | 0.34 s + 0.08 s | 9.5 s |
 | 10곡선 × 10M 팬·줌 프레임 (브리지 왕복 포함, median) | 7 ms | — |
 | 개요(10곡선 × 10M) + 상세 연동, 밴드 드래그 → 상세 갱신 (median) | 12 ms | — |
+| 창 2개에 각각 10곡선 × 10M, 한 창 팬 → 다른 창 반영 (median) | 4 ms | — |
 | TDMS 재판독 일치 / TDM 리더 일치 | 100 % | — |
 
-측정 방법·원본 수치: [docs/093-report.md](docs/093-report.md), [docs/webview-report.md](docs/webview-report.md), [docs/v3-report.md](docs/v3-report.md).
+측정 방법·원본 수치: [docs/094-report.md](docs/094-report.md), [docs/093-report.md](docs/093-report.md), [docs/webview-report.md](docs/webview-report.md), [docs/v3-report.md](docs/v3-report.md).
 
 ## 지원 형식
 | 형식 | 읽기 | 쓰기 | 비고 |
@@ -115,7 +125,9 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 |---|---|
 | 열기 / DataPlugin으로 열기 / TDMS 저장 | `Ctrl+O` / `Ctrl+Shift+O` / `Ctrl+S` |
 | 모드 전환 | `Ctrl+1` NAVIGATOR · `Ctrl+2` VIEW |
-| 테마 / 플롯 밝기 / 개발자 정보 | `Ctrl+T` / `Ctrl+P` / `Ctrl+D` |
+| 테마 / 플롯 밝기 / 개발자 정보(상태줄 표시) | `Ctrl+T` / `Ctrl+P` / `Ctrl+Shift+D` |
+| 페이지 이동 / 새 페이지 | `Ctrl+PageDown` · `Ctrl+PageUp` / 탭 줄의 `+` |
+| 차트를 새 창으로 / 주 창으로 | 차트 메뉴 ⋯ → 새 창으로 · 그립을 창 밖으로 드래그 / 창 닫기 · RETURN ALL |
 | Undo / Redo | `Ctrl+Z` / `Ctrl+Y` |
 | 사용 가이드 · 기능 투어 / 정보 대화상자 | `F1` 또는 `?` 버튼 / 로고 클릭 |
 | 투어 안에서 | `→` 다음 · `←` 이전 · `Esc` 닫기 |
@@ -130,9 +142,10 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 | 테이블 선택 복사 | 셀 드래그 → `Ctrl+C` |
 | 파일 비교 | 파일 행 `Ctrl`-클릭 → COMPARE |
 
-## 알려진 문제 (0.9.3 beta)
-- 메모리: 10곡선 × 10M을 띄우고 상세 연동·밴드 드래그를 하면 앱 프로세스 ~650 MB(메모리 맵 파일 페이지 포함, 힙 ~300 MB) + WebView2 프로세스 ~500 MB. 차트를 많이 만들고 닫으면 브라우저 프로세스 메모리가 바로 줄지 않는다(창을 닫으면 해제).
+## 알려진 문제 (0.9.4 beta)
+- 메모리: 10곡선 × 10M을 띄우고 상세 연동·밴드 드래그를 하면 앱 프로세스 ~650 MB(메모리 맵 파일 페이지 포함, 힙 ~300 MB) + WebView2 프로세스 ~500 MB. 떼어낸 창 하나당 앱 +13~16 MB, WebView2 프로세스 +약 100 MB. 창을 닫으면 돌아온다.
 - 밴드 판독 띠의 mean·RMS는 구간이 65,536 샘플을 넘으면 최대 2,048개 표본으로 추정한 값(≈ 표시). min/max와 CSV/TDMS 내보내기는 정확하다.
+- 떼어낸 창에는 NAVIGATOR가 없어 채널 드롭이 안 된다(주 창에서 곡선을 바꾼 뒤 창으로 보낸다). 창 간 차트 드래그는 지원하지 않는다.
 - 첫 프레임은 공유 메모리 버퍼가 도착하기 전이라 조금 느리다(약 100 ms).
 - X축 매핑은 샘플 수가 같은 곡선만 된다. 절대 시각은 UTC로만 표시한다. 계단 자동 감지는 앞 10만 샘플만 본다.
 - 로그 축은 0 이하 값을 건너뛴다. 값 테이블의 x 열은 활성 차트의 X 매핑을 따른다(차트에 없는 채널은 자기 x).
@@ -154,7 +167,7 @@ design/               목업(정답 화면)·디자인 문서·브랜드
 installer/            Inno Setup 스크립트, 라이선스 텍스트
 tools/pixel_diff.py   목업 대 앱 캡처 구조 비교
 ```
-자동화: `NexysView.exe --selftest --out <dir>`(관문·캡처), `--v3`(시간축 로그 기능 관문), `--v093`(그룹 드롭·줌·밴드·상세 연동·테이블·내보내기 관문), `--stress --iter 200`, `--shot --open <file> --mode VIEW [--detail 1 | --table 1 | --tour n | --help section]`.
+자동화: `NexysView.exe --selftest --out <dir>`(관문·캡처), `--v3`(시간축 로그 기능 관문), `--v093`(그룹 드롭·줌·밴드·상세 연동·테이블·내보내기 관문), `--v094`(툴바·강조 제거·드래그 미리보기·창·페이지 관문), `--stress --iter 200`, `--shot --open <file> --mode VIEW [--detail 1 | --table 1 | --tour n | --help section]`.
 
 ## 라이선스
 베타 평가용 라이선스 — [LICENSE.txt](LICENSE.txt). 번들 글꼴은 SIL Open Font License 1.1: Inter, Noto Sans KR, Instrument Serif, JetBrains Mono, Pretendard([installer/licenses](installer/licenses)). 아이콘 Lucide(ISC), SkiaSharp(MIT), Microsoft.Web.WebView2(Microsoft 라이선스), WebView2 런타임은 Microsoft 배포 조건을 따른다.

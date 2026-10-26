@@ -42,14 +42,26 @@ public sealed class Bridge
     {
         _wv = wv; _env = env; _e = e; _ui = ui; _host = host;
         _wv.WebMessageReceived += OnMessage;
-        _e.Changed += () => { ScheduleSnapshot(); PruneBuffers(); };
-        _e.ChartChanged += id => { lock (_invalid) _invalid.Add(id); ScheduleInvalidate(); };
-        _e.UndoChanged += () => _ui.BeginInvoke(DispatcherPriority.Background, () => { if (PageReady) Post(new { ev = "undo", can = _e.State.Undo.CanUndo, name = _e.State.Undo.UndoName, canRedo = _e.State.Undo.CanRedo }); });
-        _e.StatusChanged += () => _ui.BeginInvoke(DispatcherPriority.Background, () => { if (PageReady) Post(new { ev = "status", text = _e.StatusText, led = _e.Led }); });
+        _onChanged = () => { ScheduleSnapshot(); PruneBuffers(); };
+        _onChartChanged = id => { lock (_invalid) _invalid.Add(id); ScheduleInvalidate(); };
+        _onUndo = () => _ui.BeginInvoke(DispatcherPriority.Background, () => { if (PageReady) Post(new { ev = "undo", can = _e.State.Undo.CanUndo, name = _e.State.Undo.UndoName, canRedo = _e.State.Undo.CanRedo }); });
+        _onStatus = () => _ui.BeginInvoke(DispatcherPriority.Background, () => { if (PageReady) Post(new { ev = "status", text = _e.StatusText, led = _e.Led }); });
+        _e.Changed += _onChanged; _e.ChartChanged += _onChartChanged; _e.UndoChanged += _onUndo; _e.StatusChanged += _onStatus;
+    }
+    readonly Action _onChanged, _onUndo, _onStatus; readonly Action<int> _onChartChanged; bool _disposed;
+
+    /// <summary>0.9.4: a chart window closed — stop listening to the engine and release its shared buffers (no posts to a disposed WebView2).</summary>
+    public void Dispose()
+    {
+        if (_disposed) return; _disposed = true; PageReady = false;
+        _e.Changed -= _onChanged; _e.ChartChanged -= _onChartChanged; _e.UndoChanged -= _onUndo; _e.StatusChanged -= _onStatus;
+        try { _wv.WebMessageReceived -= OnMessage; } catch { }
+        foreach (var (buf, _) in _buffers.Values) { try { buf.Dispose(); } catch { } }
+        _buffers.Clear(); _ack.Clear(); _pending.Clear(); _inFlight.Clear(); _fss.Clear(); _lastReq.Clear();
     }
 
     // ------------------------------------------------------------------ outbound
-    public void Post(object msg) { try { _wv.PostWebMessageAsJson(JsonSerializer.Serialize(msg, JsonOpts)); } catch (Exception ex) { Diag.Trace("post failed " + ex.Message); } }
+    public void Post(object msg) { if (_disposed) return; try { _wv.PostWebMessageAsJson(JsonSerializer.Serialize(msg, JsonOpts)); } catch (Exception ex) { Diag.Trace("post failed " + ex.Message); } }
 
     void ScheduleSnapshot()
     {
@@ -167,6 +179,22 @@ public sealed class Bridge
             case "dropGroup": return _e.DropGroup(SL(r, "channels"), r.TryGetProperty("mode", out var dmo) && dmo.ValueKind == JsonValueKind.String ? dmo.GetString() : null);
             case "setDropMode": _e.DropMode = S(r, "mode", "unit") == "each" ? "each" : "unit"; _e.Touch(); return null;
             case "setLegacyTabs": _e.ShowLegacyTabs = B(r, "on"); if (!_e.ShowLegacyTabs && _e.Mode is "ANALYSIS" or "REPORT") _e.Mode = "VIEW"; _e.Touch(); return null;
+            // 0.9.4 pages / windows
+            case "page.add": return _e.AddPage(r.TryGetProperty("name", out var pn) && pn.ValueKind == JsonValueKind.String ? pn.GetString() : null).Id;
+            case "page.rename": _e.RenamePage(I(r, "page"), S(r, "name")); return null;
+            case "page.move": _e.MovePage(I(r, "page"), I(r, "dir", 1)); return null;
+            case "page.moveTo": _e.MovePageTo(I(r, "page"), I(r, "index", 0)); return null;
+            case "page.remove": _e.RemovePage(I(r, "page")); return null;
+            case "page.select": _e.SelectPage(I(r, "page")); return null;
+            case "page.columns": _e.SetPageColumns(I(r, "page"), I(r, "n", 1)); return null;
+            case "page.auto": _e.SetAutoPage(B(r, "on", true), I(r, "n", _e.AutoPageN)); return null;
+            case "chart.toPage": _e.MoveChartToPage(I(r, "chart"), I(r, "page")); return null;
+            case "returnChart":
+                {
+                    int rc = I(r, "chart"); int wid = _e.Get(rc)?.WindowId ?? 0; _e.ReturnChart(rc);
+                    if (wid > 0 && !_e.Charts.Any(c => c.WindowId == wid)) return _host("window.close", JsonDocument.Parse($"{{\"id\":{wid}}}").RootElement);   // last chart left → the window closes
+                    return null;
+                }
             case "table.fromChart": { var tc = _e.Get(I(r, "chart")); if (tc == null) return null; var t = _e.AddTable(); foreach (var c in tc.Model.Curves) _e.TableAdd(t.Id, c.Channel.Id); return t.Id; }
             case "export.rangeTo": { string path = S(r, "path"); bool tdms = S(r, "kind", "csv") == "tdms"; var ids = SL(r, "channels"); int ec = I(r, "chart"); double? ex0 = DN(r, "x0"), ex1 = DN(r, "x1"); return Task.Run(() => (object?)_e.ExportRange(path, tdms, ids, ec, ex0, ex1)); }
             case "setChart": _e.SetChart(I(r, "chart"), r.TryGetProperty("title", out var tt) ? tt.GetString() : null, BN(r, "grid"), BN(r, "legend"), BN(r, "lanes"), r.TryGetProperty("timeMode", out var tm) ? tm.GetString() : null); return null;

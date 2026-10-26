@@ -21,6 +21,58 @@ public partial class MainWindow : Window
     public static string WwwRoot => Path.Combine(AppContext.BaseDirectory, "wwwroot");
     public string? FixedRuntimeFolder { get; private set; }
     public string RuntimeVersion { get; private set; } = "";
+    public CoreWebView2Environment? Env { get; private set; }
+    public string DisplayName => _brand.displayName;
+    /// <summary>0.9.4: detached chart windows by id.</summary>
+    public Dictionary<int, ChartWindow> Windows { get; } = new();
+    public Dictionary<int, Rect> SavedWindowRects { get; set; } = new();
+    int _nextWindow = 2;
+    public List<LayoutStore.WindowDto> WindowRects()
+    {
+        var list = SavedWindowRects.Select(kv => new LayoutStore.WindowDto { Id = kv.Key, X = kv.Value.X, Y = kv.Value.Y, W = kv.Value.Width, H = kv.Value.Height }).ToList();
+        foreach (var w in Windows.Values) { var r = w.Rect; list.RemoveAll(x => x.Id == w.Id); list.Add(new LayoutStore.WindowDto { Id = w.Id, X = r.X, Y = r.Y, W = r.Width, H = r.Height }); }
+        return list;
+    }
+
+    /// <summary>Open a chart window and move the chart (and its detail) into it. Position: caller's screen point, else the saved rect of that id, else cascaded.</summary>
+    public async Task<int> DetachChartAsync(int chartId, double? sx, double? sy)
+    {
+        if (Engine.Get(chartId) == null || chartId == 0) return 0;
+        int id = _nextWindow++;
+        Rect? rect = SavedWindowRects.TryGetValue(id, out var saved) ? saved : null;
+        if (sx != null && sy != null) rect = new Rect(sx.Value - 200, sy.Value - 24, rect?.Width ?? 960, rect?.Height ?? 600);
+        var win = new ChartWindow(this, id, rect) { Owner = null };
+        Windows[id] = win; win.Show();
+        Engine.DetachChart(chartId, id, win.Title);
+        try { await win.WhenReady; } catch { }
+        return id;
+    }
+
+    public void OnChartWindowClosing(ChartWindow w)
+    {
+        SavedWindowRects[w.Id] = w.Rect;
+        Windows.Remove(w.Id);
+        int n = Engine.CloseWindow(w.Id);
+        Engine.SetStatus(n > 0 ? $"Window {w.Id} closed — {n} chart(s) back in the main window" : $"Window {w.Id} closed");
+    }
+
+    /// <summary>Close a chart window from the engine side (last chart returned, tests).</summary>
+    public void CloseChartWindow(int id) { if (Windows.TryGetValue(id, out var w)) { w.Returning = true; SavedWindowRects[id] = w.Rect; Windows.Remove(id); Engine.CloseWindow(id); w.Close(); } }
+
+    public static void ConfigureCore(CoreWebView2 core)
+    {
+        core.Settings.AreDefaultContextMenusEnabled = false;
+        core.Settings.AreBrowserAcceleratorKeysEnabled = false;
+        core.Settings.IsStatusBarEnabled = false;
+        core.Settings.IsZoomControlEnabled = false;
+        core.Settings.IsPinchZoomEnabled = false;
+        core.Settings.AreDevToolsEnabled = true;
+        core.Settings.IsGeneralAutofillEnabled = false;
+        core.Settings.IsPasswordAutosaveEnabled = false;
+        core.SetVirtualHostNameToFolderMapping("app.nexys", WwwRoot, CoreWebView2HostResourceAccessKind.Allow);
+        core.NewWindowRequested += (_, e) => e.Handled = true;
+        core.ProcessFailed += (_, e) => Diag.Trace($"webview process failed: {e.ProcessFailedKind} {e.Reason}");
+    }
 
     public MainWindow()
     {
@@ -29,7 +81,7 @@ public partial class MainWindow : Window
         try { Icon = BitmapFrame.Create(new Uri("pack://application:,,,/Assets/brand/AppIcon.ico"), BitmapCreateOptions.None, BitmapCacheOption.OnLoad); } catch { }
         SourceInitialized += (_, _) => AppId.ApplyWindow(new System.Windows.Interop.WindowInteropHelper(this).Handle, _brand.displayName);
         Loaded += async (_, _) => await InitAsync();
-        Closing += (_, _) => { Engine.Analysis.Cancel(); LayoutStore.Save(this); };
+        Closing += (_, _) => { Engine.Analysis.Cancel(); LayoutStore.Save(this); foreach (var w in Windows.Values.ToList()) { w.Returning = true; try { w.Close(); } catch { } } };
         Engine.Changed += () => { if (Bridge?.PageReady == true) Dispatcher.BeginInvoke(() => LayoutStore.Save(this), System.Windows.Threading.DispatcherPriority.ApplicationIdle); };
     }
 
@@ -50,22 +102,13 @@ public partial class MainWindow : Window
             string userData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NexysView", SelfTest.Enabled ? "WebView2-auto" : Program.Fresh ? "WebView2-fresh" : "WebView2");
             var opts = new CoreWebView2EnvironmentOptions { AdditionalBrowserArguments = "--disable-features=msSmartScreenProtection" };
             var env = await CoreWebView2Environment.CreateAsync(FixedRuntimeFolder, userData, opts);
+            Env = env;
             RuntimeVersion = env.BrowserVersionString;
             Web.DefaultBackgroundColor = System.Drawing.ColorTranslator.FromHtml("#ECEAE5");
             await Web.EnsureCoreWebView2Async(env);
             var core = Web.CoreWebView2;
-            core.Settings.AreDefaultContextMenusEnabled = false;
-            core.Settings.AreBrowserAcceleratorKeysEnabled = false;
-            core.Settings.IsStatusBarEnabled = false;
-            core.Settings.IsZoomControlEnabled = false;
-            core.Settings.IsPinchZoomEnabled = false;
-            core.Settings.AreDevToolsEnabled = true;
-            core.Settings.IsGeneralAutofillEnabled = false;
-            core.Settings.IsPasswordAutosaveEnabled = false;
             if (!Directory.Exists(WwwRoot)) { Boot.Text = "wwwroot missing — run `npm run build` in app/web and rebuild"; Diag.Trace("wwwroot missing: " + WwwRoot); }
-            core.SetVirtualHostNameToFolderMapping("app.nexys", WwwRoot, CoreWebView2HostResourceAccessKind.Allow);
-            core.NewWindowRequested += (_, e) => e.Handled = true;
-            core.ProcessFailed += (_, e) => Diag.Trace($"webview process failed: {e.ProcessFailedKind} {e.Reason}");
+            ConfigureCore(core);
             Bridge = new Bridge(core, env, Engine, Dispatcher, HostCommand);
             Bridge.Ready += () => { Diag.Trace("page ready"); Dispatcher.BeginInvoke(() => { LayoutStore.Load(this); Bridge.PushSnapshot(); _ready.TrySetResult(); }); };
             core.Navigate("https://app.nexys/index.html");
@@ -80,10 +123,25 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Host-only commands (need WPF dialogs or files).</summary>
-    async Task<object?> HostCommand(string cmd, JsonElement args)
+    public async Task<object?> HostCommand(string cmd, JsonElement args)
     {
         switch (cmd)
         {
+            // 0.9.4 chart windows
+            case "detachChart":
+                {
+                    int chart = args.GetProperty("chart").GetInt32();
+                    double? sx = args.TryGetProperty("x", out var ax) && ax.ValueKind == JsonValueKind.Number ? ax.GetDouble() : null, sy = args.TryGetProperty("y", out var ay) && ay.ValueKind == JsonValueKind.Number ? ay.GetDouble() : null;
+                    return await DetachChartAsync(chart, sx, sy);
+                }
+            case "window.close": { int id = args.GetProperty("id").GetInt32(); CloseChartWindow(id); return null; }
+            case "window.returnAll":
+                {
+                    int id = args.GetProperty("id").GetInt32();
+                    foreach (var c in Engine.Charts.Where(c => c.WindowId == id).ToList()) Engine.ReturnChart(c.Id);
+                    CloseChartWindow(id); return null;
+                }
+            case "window.list": return Windows.Values.Select(w => new { id = w.Id, title = w.Title, x = w.Rect.X, y = w.Rect.Y, w = w.Rect.Width, h = w.Rect.Height }).ToList();
             case "openDialog":
                 {
                     var dlg = new OpenFileDialog { Filter = "Measurement data|*.tdms;*.tdm;*.dxd;*.csv;*.txt;*.xyz;*.tdv|TDMS|*.tdms|TDM|*.tdm|DXD|*.dxd|CSV|*.csv;*.txt|VIEW layout|*.tdv|All|*.*", Multiselect = true };
@@ -171,7 +229,7 @@ public partial class MainWindow : Window
 /// <summary>Version strings for the title bar, the page header and the About dialog (from the assembly's InformationalVersion).</summary>
 public static class AppInfo
 {
-    public static string Version { get; } = (typeof(AppInfo).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).FirstOrDefault() as System.Reflection.AssemblyInformationalVersionAttribute)?.InformationalVersion.Split('+')[0] ?? "0.9.3-beta";
+    public static string Version { get; } = (typeof(AppInfo).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).FirstOrDefault() as System.Reflection.AssemblyInformationalVersionAttribute)?.InformationalVersion.Split('+')[0] ?? "0.9.4-beta";
     public static bool IsBeta => Version.Contains("beta", StringComparison.OrdinalIgnoreCase);
     /// <summary>"0.9.0 beta"</summary>
     public static string VersionText => Version.Replace("-beta", " beta");

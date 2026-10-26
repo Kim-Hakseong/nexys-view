@@ -13,8 +13,8 @@ const sub = (t: string) => `<p class="sub">${t}</p>`;
 export const TOUR_STEPS: Step[] = [
   { sel: null, title: 'Nexys VIEW에 오신 것을 환영합니다 👋',
     body: `<p>Nexys VIEW는 <b>TDMS · TDM · CSV 측정 로그</b>를 열어 곡선으로 보고, 계산하고, 보고서로 만드는 뷰어입니다.</p>${sub(`약 1분이면 핵심 기능을 둘러볼 수 있어요. 언제든 ${kbd('ESC')} 키로 닫을 수 있습니다.`)}` },
-  { sel: '.modes', place: 'bottom', pad: 6, title: '1. 네 가지 화면',
-    body: `<p><b>NAVIGATOR</b>(파일·채널) 와 <b>VIEW</b>(차트) 두 화면입니다.</p>${sub(`${kbd('Ctrl+1')} / ${kbd('Ctrl+2')}로도 바꿀 수 있어요.`)}` },
+  { sel: '.tools-modes', place: 'bottom', pad: 6, title: '1. 두 가지 화면',
+    body: `<p>툴바 첫 그룹의 <b>NAVIGATOR</b>(파일·채널) 와 <b>VIEW</b>(차트) 두 화면입니다. 활성 화면은 배경과 밑줄로 표시돼요.</p>${sub(`${kbd('Ctrl+1')} / ${kbd('Ctrl+2')}로도 바꿀 수 있어요.`)}` },
   { sel: '[data-a="open"]', place: 'bottom', title: '2. 파일 열기',
     body: `<p><b>OPEN</b>을 누르거나 파일을 <b>창 어디에나 끌어다 놓으면</b> 열립니다. 처음에는 내장 샘플(Sample.tdms)이 열려 있어요.</p>${sub(`.tdms · .tdm/.tdx · .csv/.txt · .tdv, DataPlugin은 ${kbd('Ctrl+Shift+O')}.`)}` },
   { sel: '.nav', mode: 'VIEW', place: 'right', pad: 4, title: '3. 채널 트리',
@@ -25,9 +25,11 @@ export const TOUR_STEPS: Step[] = [
     body: `<p>고른 채널·곡선의 정보와 <b>커서 A/B 값</b>이 여기에 보입니다.</p>${sub(`곡선 버튼: STEP/LINE, RIGHT AXIS, SET AS X, REMOVE. 차트 버튼: DIGITAL LANES, GRID, ZOOM FULL. 시간축이면 REL/ABS/NUMERIC 눈금.`)}` },
   { sel: '.view', mode: 'VIEW', place: 'left', pad: 4, title: '6. 밴드 커서와 상세 차트',
     body: `<p>${kbd('Ctrl+B')} 또는 헤더의 <b>A / B</b> 알약을 누르면 <b>밴드 커서</b>가 됩니다. 손잡이를 끌어 폭을, 안쪽을 끌어 위치를 바꾸고 판독 띠에서 구간의 min / max / mean / RMS / p-p를 읽어요.</p>${sub(`차트 메뉴(⋯) → <b>상세 차트 연결</b>: 아래에 상세 차트가 생기고 밴드 구간을 확대해 보여줍니다. 밴드를 움직이면 상세가, 상세를 줌·팬하면 밴드가 따라와요.`)}` },
-  { sel: '.view', mode: 'VIEW', place: 'left', pad: 4, title: '7. 줌과 내보내기',
+  { sel: '.pages', mode: 'VIEW', place: 'bottom', pad: 4, title: '7. 페이지와 창',
+    body: `<p>VIEW 위의 <b>페이지 탭</b>으로 차트를 묶습니다(+ 로 추가, 더블클릭 이름, 드래그 순서, × 제거). GRID 1 COL / 2 COL, AUTO PAGE는 차트가 n개를 넘으면 새 페이지를 만들어요.</p>${sub(`차트 메뉴(⋯) → <b>새 창으로</b>(또는 그립을 창 밖으로 드래그)하면 별도 창에 차트가 뜨고, 밴드·X링크·커서가 창을 넘어 함께 움직입니다. 창을 닫으면 차트는 주 창으로 돌아와요.`)}` },
+  { sel: '.view', mode: 'VIEW', place: 'left', pad: 4, title: '8. 줌과 내보내기',
     body: `<p><b>오른쪽 드래그</b> = 영역 확대(${kbd('Shift')} = X만, ${kbd('Ctrl')} = Y만), 휠 = 커서 기준 줌, 더블클릭 = 전체, ${kbd('Backspace')} = 줌 되돌리기(20단계).</p>${sub(`차트 메뉴(⋯)에서 밴드 구간을 <b>CSV / TDMS</b>로 저장하고, 차트 PNG를 복사·저장하고, <b>+ TABLE</b>로 값 표를 엽니다. 같은 X를 쓰는 차트는 팬·줌이 함께 움직여요(LINK).`)}` },
-  { sel: '[data-a="help"]', place: 'bottom', title: '8. 도움말은 언제든',
+  { sel: '[data-a="help"]', place: 'bottom', title: '9. 도움말은 언제든',
     body: `<p><b>?</b> 버튼이나 ${kbd('F1')}을 누르면 사용 가이드와 단축키 목록, <b>"기능 투어 다시 보기"</b>가 있습니다.</p>${sub(`이제 파일을 열고 채널이나 그룹을 끌어다 놓아 보세요 🚀`)}` },
 ];
 
@@ -104,7 +106,9 @@ const SECTIONS: { id: string; label: string; html: (app: any) => string }[] = [
     <p>합성 신호 8채널(Time·Sine 1 Hz·Sine 5 Hz·Ramp·Temperature·Square·Counter·State, 20 s @ 1 kHz)이 <code>%LOCALAPPDATA%\\NexysView\\sample\\</code>에 한 번 만들어집니다. 데이터 소스 카드의 ×로 닫을 수 있어요.</p>
     <div class="help-note">문제나 제안은 <a href="#" data-url="${esc(app.issues || '')}">GitHub Issues</a>에 Windows 버전·재현 순서·파일 종류(채널·샘플 수)와 함께 남겨 주세요. 저장소: <a href="#" data-url="${esc(app.repo || '')}">${esc(app.repo || '')}</a></div>` },
   { id: 'screens', label: '화면 구성', html: () => `
-    <h3>두 가지 화면</h3><p>상단 가운데 탭 또는 <kbd>Ctrl+1</kbd> / <kbd>Ctrl+2</kbd>로 바꿉니다. 왼쪽 NAVIGATOR 트리는 VIEW에서도 그대로 있어요. (ANALYSIS·REPORT 탭은 설정 파일의 showLegacyTabs로만 표시)</p>
+    <h3>두 가지 화면</h3><p>툴바 첫 그룹의 NAVIGATOR / VIEW 버튼 또는 <kbd>Ctrl+1</kbd> / <kbd>Ctrl+2</kbd>로 바꿉니다. 왼쪽 NAVIGATOR 트리는 VIEW에서도 그대로 있어요. (ANALYSIS·REPORT는 설정 파일의 ShowLegacyTabs로만 표시)</p>
+    <div class="help-card"><b>페이지</b><p>VIEW 위의 탭으로 차트를 페이지에 나눠 둡니다. + 추가, 더블클릭 이름 바꾸기, 드래그 순서 바꾸기, × 제거(차트는 다른 페이지로 이동). GRID 1 COL / 2 COL, AUTO PAGE ON이면 차트가 n개를 넘을 때 새 페이지가 생깁니다. <kbd>Ctrl+PageDown</kbd> / <kbd>Ctrl+PageUp</kbd>으로 이동.</p></div>
+    <div class="help-card"><b>여러 창</b><p>차트 메뉴(⋯) → 새 창으로, 또는 헤더 그립을 창 밖으로 드래그하면 차트가 별도 창으로 나갑니다. 같은 세션이라 X축 링크·밴드·개요/상세·커서가 창을 넘어 함께 움직이고, 창을 닫거나 RETURN ALL을 누르면 차트는 주 창으로 돌아옵니다. 창 위치·크기는 기억됩니다.</p></div>
     <div class="help-card"><b>NAVIGATOR</b><p>파일 ▸ 그룹 ▸ 채널 트리와 데이터 소스 카드(채널·샘플 수·크기·열기 시간). 이름에 <code>.</code>이 있는 채널은 계층으로 접히고(TREE/FLAT), 검색은 부분 문자열이나 <code>*</code> <code>?</code> 와일드카드. <b>DROP ALL (n)</b>은 일치 채널로 차트를 만듭니다. 파일을 <kbd>Ctrl</kbd>-클릭으로 여러 개 고르고 <b>COMPARE n FILES</b>로 공통 채널을 파일별 곡선으로 겹쳐 봐요(정렬: 시작 시각 / 0 s / 수동).</p></div>
     <div class="help-card"><b>VIEW</b><p>차트 영역. 채널을 놓는 위치에 따라 새 차트 / 곡선 추가 / 축 지정 / X축 지정이 되고, <b>파일·그룹 노드를 놓으면 바로 차트</b>가 됩니다(드롭 존의 BY UNIT = 단위별 Y축으로 1개, PER CHANNEL = 채널마다). 차트마다 커서 A/B 표 또는 밴드 판독 띠, 범례, 메뉴(⋯)가 있어요.</p></div>
     <div class="help-card"><b>PROPERTIES</b><p>곡선: LINE / STEP / POINTS, 굵기 1·1.5·2, 색, 축 L/R · SHARED/OWN, 숨김. Y축: AUTO/MANUAL 범위, LOG, 좌·우. 설정은 레이아웃에 저장됩니다.</p></div>
@@ -144,7 +148,7 @@ const SECTIONS: { id: string; label: string; html: (app: any) => string }[] = [
     <table class="help-table"><tr><td>CSV / TDMS</td><td>차트 메뉴(⋯) 또는 PROPERTIES → EXPORT. 밴드가 있으면 밴드 구간만, 없으면 전체. 차트의 채널 전부.</td></tr><tr><td>차트 PNG</td><td>PNG COPY(클립보드) / PNG…(파일)</td></tr><tr><td>모든 채널 TDMS</td><td>헤더 SAVE (<kbd>Ctrl+S</kbd>)</td></tr></table>` },
   { id: 'keys', label: '단축키', html: () => `
     <h3>키보드 단축키</h3><p>마우스 없이도 빠르게 쓸 수 있어요.</p>
-    <table class="help-keys">${[['열기', 'Ctrl + O'], ['DataPlugin으로 열기', 'Ctrl + Shift + O'], ['모든 채널 TDMS로 저장', 'Ctrl + S'], ['NAVIGATOR / VIEW', 'Ctrl + 1 · 2'], ['밴드 커서 ↔ 자유 커서', 'Ctrl + B'], ['줌 되돌리기 (20단계)', 'Backspace'], ['밴드 1 px / 10 px 이동', '← → / Shift + ← →'], ['테이블 선택 복사', 'Ctrl + C'], ['Undo / Redo', 'Ctrl + Z / Ctrl + Y'], ['테마 / 플롯 밝기 / 개발자 정보', 'Ctrl + T / Ctrl + P / Ctrl + D'], ['도움말 / 투어 닫기', 'F1 / Esc']].map(([a, b]) => `<tr><td>${a}</td><td><kbd>${b}</kbd></td></tr>`).join('')}</table>
+    <table class="help-keys">${[['열기', 'Ctrl + O'], ['DataPlugin으로 열기', 'Ctrl + Shift + O'], ['모든 채널 TDMS로 저장', 'Ctrl + S'], ['NAVIGATOR / VIEW', 'Ctrl + 1 · 2'], ['페이지 이동', 'Ctrl + PageDown / PageUp'], ['밴드 커서 ↔ 자유 커서', 'Ctrl + B'], ['줌 되돌리기 (20단계)', 'Backspace'], ['밴드 1 px / 10 px 이동', '← → / Shift + ← →'], ['테이블 선택 복사', 'Ctrl + C'], ['Undo / Redo', 'Ctrl + Z / Ctrl + Y'], ['테마 / 플롯 밝기 / 개발자 정보', 'Ctrl + T / Ctrl + P / Ctrl + Shift + D'], ['도움말 / 투어 닫기', 'F1 / Esc']].map(([a, b]) => `<tr><td>${a}</td><td><kbd>${b}</kbd></td></tr>`).join('')}</table>
     <div class="help-note">차트 위: 휠 줌 · 드래그 이동 · <b>오른쪽 드래그 영역 확대</b>(<kbd>Shift</kbd> = X만, <kbd>Ctrl</kbd> = Y만) · 더블클릭 전체 · 클릭 커서 A · <kbd>Shift</kbd>+클릭 커서 B · 우클릭 커서 해제</div>` },
   { id: 'tips', label: '활용 팁', html: () => `
     <h3>활용 팁</h3>

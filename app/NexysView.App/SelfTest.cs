@@ -14,7 +14,7 @@ namespace NexysView.App;
 public static partial class SelfTest
 {
     public static string[] Args = Array.Empty<string>();
-    public static bool Enabled => Args.Length > 0 && Args[0] is "--shot" or "--selftest" or "--stress" or "--stress-analysis" or "--v3" or "--v093";
+    public static bool Enabled => Args.Length > 0 && Args[0] is "--shot" or "--selftest" or "--stress" or "--stress-analysis" or "--v3" or "--v093" or "--v094";
     static readonly List<string> Log = new();
     public static string OutDir = "";
     static readonly List<string> Gate = new();
@@ -41,6 +41,7 @@ public static partial class SelfTest
             else if (Args[0] == "--stress-analysis") await StressAnalysisAsync(w);
             else if (Args[0] == "--v3") await V3Async(w);
             else if (Args[0] == "--v093") await V093Async(w);
+            else if (Args[0] == "--v094") await V094Async(w);
             else await FullAsync(w);
         }
         catch (Exception ex) { L("FATAL " + ex); }
@@ -182,6 +183,8 @@ public static partial class SelfTest
     static Task FullAsync(MainWindow w) { Task t = Task.CompletedTask; FullImpl(w, ref t); return t; }
     static partial void V3Impl(MainWindow w, ref Task task);
     static Task V3Async(MainWindow w) { Task t = Task.CompletedTask; V3Impl(w, ref t); return t; }
+    static partial void V094Impl(MainWindow w, ref Task task);
+    static Task V094Async(MainWindow w) { Task t = Task.CompletedTask; V094Impl(w, ref t); return t; }
     static partial void V093Impl(MainWindow w, ref Task task);
     static Task V093Async(MainWindow w) { Task t = Task.CompletedTask; V093Impl(w, ref t); return t; }
     static partial void StressImpl(MainWindow w, ref Task task);

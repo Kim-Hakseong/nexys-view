@@ -107,3 +107,6 @@ Release https://github.com/Kim-Hakseong/nexys-view/releases/tag/v0.9.1-beta · �
 
 ## 7. 0.9.3 beta (2026-10-26) — VIEW 탐색 도구 집중
 동료 피드백(v093.md) 반영: ANALYSIS·REPORT 탭 숨김(플래그), 그룹/파일 드롭 → 차트, 오른쪽 드래그 영역 줌 + Backspace 히스토리, 밴드 커서 + 판독 띠, 개요/상세 연동, X축 링크, 축·곡선 설정, 가상 테이블 + Ctrl+C, 밴드 구간 CSV/TDMS·차트 PNG. 사용법·캡처·관문 수치는 **docs/093-report.md**.
+
+## 8. 0.9.4 beta (2026-10-26) — 강조 제거·툴바·페이지·다중창
+v094.md 반영: accent 색 테두리/좌측 띠 전수 제거, 다중 선택 드래그 미리보기 버그 수정, 툴바 통합, 페이지, 여러 창. 제거 목록·버그 원인·구조도·관문·캡처는 **docs/094-report.md**.

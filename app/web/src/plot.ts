@@ -3,7 +3,7 @@
 // gestures run locally and request new frames (latest-wins), the committed view goes to the engine for undo / zoom history.
 // 0.9.3: right-drag zoom box (Shift = x only, Ctrl = y only), band cursor (handles, move, keyboard nudge), overview/detail link,
 // x-axis link, log axes, curve width / points, chart menu (detail link, table, exports, PNG).
-import { bridge } from './bridge';
+import { bridge, WIN } from './bridge';
 import { I } from './icons';
 import { ChartDto, FrameHdr, State } from './types';
 import { curveColor, esc, fmtRead, fmtSigned, fmtValue, h } from './util';
@@ -23,7 +23,7 @@ export class PlotView {
   dto: ChartDto; plot = 'dark';
   private seq = 0; private inFlight = false; private pendingReq: any = null; lastHdr: FrameHdr | null = null; private drawnSeq = -1;
   private sentAt = new Map<number, number>();
-  timings: FrameTiming[] = []; frames = 0; lastEngineMs = 0; lastTotalMs = 0; lastStats: FrameHdr['stats'] | null = null;
+  timings: FrameTiming[] = []; frames = 0; lastEngineMs = 0; lastTotalMs = 0; lastStats: FrameHdr['stats'] | null = null; lastPaintEpoch = 0; paintEpochs: number[] = [];
   // local view during gestures
   private xmin = 0; private xmax = 1; private gestureFrom: [number, number] | null = null; private dragging = false;
   private L = 56; private R = 16; private T = 16; private B = 50; private laneN = 0;
@@ -84,7 +84,7 @@ export class PlotView {
     }
     const band = d.cursorMode === 'band';
     pills += `<button class="pill${band ? ' on' : ''}" data-act="cursorMode" title="${band ? '밴드 커서 · 클릭하면 자유 커서 A/B (Ctrl+B)' : '자유 커서 A/B · 클릭하면 밴드 커서 (Ctrl+B)'}">${band ? 'BAND' : 'A / B'}</button>`;
-    if (d.detailOf != null) pills += `<span class="pill on" data-act="detailinfo" title="개요 차트의 밴드 구간을 보여주는 상세 차트">DETAIL</span>`;
+    if (d.detailOf != null) pills += `<span class="chip" data-act="detailinfo" title="개요 차트의 밴드 구간을 보여주는 상세 차트">linked · ${esc((d as any).detailOfName || 'Chart ' + d.detailOf)}</span>`;
     else if (d.linkKey) pills += `<button class="pill${d.linkX ? ' on' : ''}" data-act="link" title="${d.linkX ? 'X축 링크 켜짐 · 클릭하면 이 차트만 따로 움직임' : 'X축 링크 꺼짐 · 클릭하면 같은 X를 쓰는 차트와 함께 움직임'}">${I.link(11, d.linkX ? 'var(--on-accent)' : 'currentColor')}LINK</button>`;
     const legTitle = d.hasDetail ? 'Click: show in the detail chart · Shift+click: show/hide · drag to another chart' : 'Click: show/hide · drag to another chart';
     const legend = d.curves.filter(c => !c.lane).map(c => `<span class="leg${c.visible ? '' : ' off'}" data-leg="${c.idx}" draggable="true" title="${legTitle}"><span class="swatch" style="background:${curveColor(c.color, this.plot)}"></span>${esc(c.name)}</span>`).join('');
@@ -158,7 +158,7 @@ export class PlotView {
       if (!this.bandDragging) this.band = this.lastHdr.band ? { x0: this.lastHdr.band.x0, x1: this.lastHdr.band.x1 } : null;
       this.draw(this.lastHdr);
       const t1 = performance.now();
-      this.frames++; this.lastEngineMs = this.lastHdr.stats.ms; this.lastTotalMs = t1 - t0; this.lastStats = this.lastHdr.stats;
+      this.frames++; this.lastEngineMs = this.lastHdr.stats.ms; this.lastTotalMs = t1 - t0; this.lastStats = this.lastHdr.stats; this.lastPaintEpoch = performance.timeOrigin + t1; this.paintEpochs.push(this.lastPaintEpoch); if (this.paintEpochs.length > 200) this.paintEpochs.shift();
       this.timings.push({ seq: m.seq, t0, t1, engineMs: this.lastHdr.stats.ms }); if (this.timings.length > 400) this.timings.shift();
       this.renderCursorTable();
       document.dispatchEvent(new CustomEvent('nx-frame', { detail: { chart: this.dto.id, ms: t1 - t0, stats: this.lastHdr.stats } }));
@@ -449,6 +449,7 @@ export class PlotView {
       { a: 'zoomfull', t: '전체 보기 (더블클릭)' }, { a: 'zoomback', t: '줌 되돌리기 (Backspace)', dis: d.zoomHistory === 0 },
       { a: 'csv', t: band ? '밴드 구간 → CSV…' : '전체 → CSV…', dis: d.curves.length === 0 }, { a: 'tdms', t: band ? '밴드 구간 → TDMS…' : '전체 → TDMS…', dis: d.curves.length === 0 },
       { a: 'pngcopy', t: '차트 PNG 복사' }, { a: 'pngsave', t: '차트 PNG 저장…' },
+      WIN === 0 ? { a: 'detach', t: '새 창으로 (그립을 창 밖으로 끌어도 됨)' } : { a: 'return', t: '주 창으로' },
     ];
     this.menu = h(`<div class="menu" role="menu">${items.map(i => `<button role="menuitem" data-m="${i.a}"${i.dis ? ' disabled' : ''}>${i.on ? I.check() : '<span class="sp"></span>'}${esc(i.t)}</button>`).join('')}</div>`);
     const r = anchor.getBoundingClientRect(); const hr = this.el.getBoundingClientRect();
@@ -471,6 +472,8 @@ export class PlotView {
       case 'tdms': bridge.call('export.range', { kind: 'tdms', channels: chans, chart: id, ...range }); break;
       case 'pngcopy': bridge.call('png.copy', { dataUrl: this.pngDataUrl() }); break;
       case 'pngsave': bridge.call('png.save', { dataUrl: this.pngDataUrl(), name: (d.title || 'chart') + '.png' }); break;
+      case 'detach': bridge.call('detachChart', { chart: id }); break;
+      case 'return': bridge.call('returnChart', { chart: id }); break;
     }
   }
   pngDataUrl() { return this.canvas.toDataURL('image/png'); }
@@ -543,11 +546,16 @@ export class PlotView {
       if (leg) { e.dataTransfer!.setData(DRAG_CURVE, JSON.stringify({ chart: this.dto.id, idx: +leg.dataset.leg! })); e.dataTransfer!.effectAllowed = 'move'; return; }
       if (t.closest('.grip')) { e.dataTransfer!.setData(DRAG_CHART, String(this.dto.id)); e.dataTransfer!.effectAllowed = 'move'; this.el.classList.add('dragging'); }
     });
-    this.head.addEventListener('dragend', () => this.el.classList.remove('dragging'));
-    this.el.addEventListener('dragover', e => { if (e.dataTransfer?.types.includes(DRAG_CHART)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; this.el.style.borderColor = 'var(--accent2)'; } });
-    this.el.addEventListener('dragleave', () => { this.el.style.borderColor = ''; });
+    this.head.addEventListener('dragend', e => {
+      this.el.classList.remove('dragging');
+      // grip dropped outside this window (no target took it) → open a chart window at the pointer's screen position
+      if (WIN === 0 && (e.target as HTMLElement).closest('.grip') && e.dataTransfer?.dropEffect === 'none' && (e.clientX < 0 || e.clientY < 0 || e.clientX > window.innerWidth || e.clientY > window.innerHeight))
+        bridge.call('detachChart', { chart: this.dto.id, x: e.screenX, y: e.screenY });
+    });
+    this.el.addEventListener('dragover', e => { if (e.dataTransfer?.types.includes(DRAG_CHART)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; this.el.classList.add('over'); } });
+    this.el.addEventListener('dragleave', () => { this.el.classList.remove('over'); });
     this.el.addEventListener('drop', e => {
-      this.el.style.borderColor = '';
+      this.el.classList.remove('over');
       const dt = e.dataTransfer; if (!dt || !dt.types.includes(DRAG_CHART)) return;
       e.preventDefault(); const other = +dt.getData(DRAG_CHART); if (other && other !== this.dto.id) bridge.call('swapCharts', { a: other, b: this.dto.id });
     });

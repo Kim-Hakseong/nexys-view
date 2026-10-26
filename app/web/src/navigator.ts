@@ -38,6 +38,9 @@ export class Navigator {
     this.inner.addEventListener('click', e => this.onClick(e));
     this.inner.addEventListener('dblclick', e => { const r = this.rowOf(e); if (r?.ch) bridge.call('addCurves', { chart: this.S?.activeChart ?? 0, channels: [r.ch.id], zone: 'plot' }).then(() => bridge.call('setMode', { mode: 'VIEW' })); });
     this.inner.addEventListener('dragstart', e => this.onDragStart(e));
+    this.inner.addEventListener('dragend', () => Navigator.endPreview());
+    document.addEventListener('dragover', e => Navigator.movePreview(e.clientX, e.clientY));
+    document.addEventListener('drop', () => Navigator.endPreview()); document.addEventListener('dragend', () => Navigator.endPreview());
     new ResizeObserver(() => this.paint()).observe(this.tree);
   }
   private applyHier(on: boolean) { if (!this.S) return; for (const f of this.S.files) bridge.call('setHier', { file: f.name, on }); }
@@ -123,8 +126,9 @@ export class Navigator {
     const c = r.ch!; const sel = S.selected === c.id;
     const inChart = S.charts.find(ch => ch.curves.some(cv => cv.channelId === c.id));
     const spark = S.sparks[c.id] && (sel || inChart) ? `<span class="spark">${sparkSvg(S.sparks[c.id], inChart ? curveColor(inChart.curves.find(cv => cv.channelId === c.id)!.color, S.plot) : '#E8601C')}</span>` : '';
-    const picked = this.picked.includes(c.id) && this.picked.length === 2 ? ' style="outline:1px solid var(--accent2);outline-offset:-1px"' : '';
-    return `<div class="row-ch${sel ? ' sel' : ''}" data-i="${i}" data-ch="${esc(c.id)}" draggable="true"${picked} style="position:absolute;top:${top}px;left:0;right:0;padding-left:${42 + 16 * (r.depth - 2)}px"><span class="ic">${c.isText ? I.text() : c.step ? I.step() : I.line()}</span><span class="name">${esc(r.name)}</span>${spark}<span class="m">${esc(r.meta)}</span></div>`;
+    // 0.9.4: the pick mark is a class (a second style attribute used to drop the absolute position → rows piled up at the top of the tree)
+    const picked = this.picked.includes(c.id) && this.picked.length === 2 ? ' picked' : '';
+    return `<div class="row-ch${sel ? ' sel' : ''}${picked}" data-i="${i}" data-ch="${esc(c.id)}" draggable="true" style="position:absolute;top:${top}px;left:0;right:0;padding-left:${42 + 16 * (r.depth - 2)}px"><span class="ic">${c.isText ? I.text() : c.step ? I.step() : I.line()}</span><span class="name">${esc(r.name)}</span>${spark}<span class="m">${esc(r.meta)}</span></div>`;
   }
 
   private onClick(e: MouseEvent) {
@@ -156,6 +160,7 @@ export class Navigator {
       e.dataTransfer.setData(DRAG_GROUP, r.kind);
     }
     if (chans.length === 0) { e.preventDefault(); return; }
+    this.startPreview(e, chans);
     e.dataTransfer.setData(DRAG_CH, JSON.stringify(chans.map(c => ({ id: c.id, name: c.name, time: c.time }))));
     e.dataTransfer.setData('text/plain', chans.map(c => c.name).join(', '));
     e.dataTransfer.effectAllowed = 'copyMove';
@@ -170,7 +175,27 @@ export class Navigator {
     const path = r.key.split('/n:').slice(1);   // node path parts
     return g.channels.filter(c => keep(c, g.name) && nameParts(c.name).length > path.length && path.every((p, i) => nameParts(c.name)[i] === p));
   }
+  // ---- drag preview (0.9.4): neutral card that follows the pointer and stays inside the window (the OS ghost is replaced by a blank image)
+  static preview: HTMLElement | null = null;
+  private static blank: HTMLCanvasElement | null = null;
+  private startPreview(e: DragEvent, chans: ChannelDto[]) {
+    if (!Navigator.blank) { Navigator.blank = document.createElement('canvas'); Navigator.blank.width = Navigator.blank.height = 1; }
+    try { e.dataTransfer!.setDragImage(Navigator.blank, 0, 0); } catch { }
+    Navigator.preview?.remove();
+    const names = chans.slice(0, 3).map(c => `<span>${esc(c.name)}</span>`).join('') + (chans.length > 3 ? `<span>… +${chans.length - 3}</span>` : '');
+    const el = h(`<div class="drag-preview"><b>${chans.length === 1 ? esc(chans[0].name) : `${chans.length} channels`}</b>${chans.length === 1 ? '' : names}</div>`);
+    document.body.append(el); Navigator.preview = el;
+    Navigator.movePreview(e.clientX, e.clientY);
+  }
+  static movePreview(x: number, y: number) {
+    const el = Navigator.preview; if (!el) return;
+    const w = el.offsetWidth, hh = el.offsetHeight;
+    el.style.left = Math.max(0, Math.min(window.innerWidth - w, x + 14)) + 'px';
+    el.style.top = Math.max(0, Math.min(window.innerHeight - hh, y + 14)) + 'px';
+  }
+  static endPreview() { Navigator.preview?.remove(); Navigator.preview = null; }
   find(id: string): ChannelDto | undefined { for (const f of this.S?.files ?? []) for (const g of f.groups) for (const c of g.channels) if (c.id === id) return c; return undefined; }
+  setPicked(ids: string[]) { this.picked = ids.slice(0, 2); this.paint(); }
   setSearch(q: string) { this.input.value = q; this.query = q; this.rebuild(); }
   rowElement(channelId: string): HTMLElement | null {
     const i = this.rows.findIndex(r => r.ch?.id === channelId); if (i < 0) return null;

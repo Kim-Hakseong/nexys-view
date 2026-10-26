@@ -1,8 +1,9 @@
 // VIEW center: chart cards (PlotView per chart, keyed by id), value tables (virtualized, cursor row tracking, rectangular
 // selection + Ctrl+C), the dashed "new chart" drop zone with the drop rule (by unit / per channel) and "+ TABLE".
-import { bridge } from './bridge';
+import { bridge, WIN } from './bridge';
 import { I } from './icons';
 import { DRAG_CH, DRAG_CURVE, DRAG_GROUP, PlotView } from './plot';
+const DRAG_PAGE = 'application/x-nexys-page';
 import { State, TableDto } from './types';
 import { esc, fmtInt, fmtValue, h } from './util';
 
@@ -27,9 +28,9 @@ class TableView {
     this.inner.addEventListener('pointermove', e => { if (!this.anchor || !(e.buttons & 1)) return; const c = this.cellAt(e); if (!c) return; this.sel = { r0: Math.min(this.anchor[0], c[0]), c0: Math.min(this.anchor[1], c[1]), r1: Math.max(this.anchor[0], c[0]), c1: Math.max(this.anchor[1], c[1]) }; this.paint(); });
     window.addEventListener('pointerup', () => { this.anchor = null; });
     this.el.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && this.sel) { e.preventDefault(); e.stopPropagation(); this.copy(this.sel.r0, this.sel.c0, this.sel.r1, this.sel.c1); } });
-    this.el.addEventListener('dragover', e => { if (e.dataTransfer?.types.includes(DRAG_CH)) { e.preventDefault(); this.el.style.borderColor = 'var(--accent2)'; } });
-    this.el.addEventListener('dragleave', () => { this.el.style.borderColor = ''; });
-    this.el.addEventListener('drop', e => { this.el.style.borderColor = ''; const dt = e.dataTransfer; if (!dt?.types.includes(DRAG_CH)) return; e.preventDefault(); e.stopPropagation(); const chans = JSON.parse(dt.getData(DRAG_CH) || '[]') as { id: string }[]; bridge.call('table.addChannels', { table: this.dto.id, channels: chans.map(c => c.id) }); });
+    this.el.addEventListener('dragover', e => { if (e.dataTransfer?.types.includes(DRAG_CH)) { e.preventDefault(); this.el.classList.add('over'); } });
+    this.el.addEventListener('dragleave', () => { this.el.classList.remove('over'); });
+    this.el.addEventListener('drop', e => { this.el.classList.remove('over'); const dt = e.dataTransfer; if (!dt?.types.includes(DRAG_CH)) return; e.preventDefault(); e.stopPropagation(); const chans = JSON.parse(dt.getData(DRAG_CH) || '[]') as { id: string }[]; bridge.call('table.addChannels', { table: this.dto.id, channels: chans.map(c => c.id) }); });
     new ResizeObserver(() => this.paint()).observe(this.scroll);
   }
   get scale() { const full = this.dto.rows * ROW_H; return full > MAX_SPACER ? MAX_SPACER / full : 1; }
@@ -134,30 +135,85 @@ export class ViewArea {
     });
   }
 
-  setState(S: State) {
+  // 0.9.4: pages (main window) and the chart grid
+  private pages: HTMLElement = h(`<div class="pages"></div>`);
+  private grid: HTMLElement = h(`<div class="charts"></div>`);
+  private pagesBound = false;
+  private bindPages() {
+    this.pagesBound = true;
+    this.pages.addEventListener('click', e => {
+      const S = this.S; if (!S) return; const t = e.target as HTMLElement;
+      const act = (t.closest('[data-pact]') as HTMLElement | null)?.dataset.pact;
+      const tab = t.closest('.ptab[data-page]') as HTMLElement | null; const pid = tab ? +tab.dataset.page! : S.activePage;
+      if (act === 'remove') { e.stopPropagation(); this.confirmRemove(pid); return; }
+      if (act === 'add') { bridge.call('page.add'); return; }
+      if (act === 'cols1' || act === 'cols2') { bridge.call('page.columns', { page: S.activePage, n: act === 'cols2' ? 2 : 1 }); return; }
+      if (act === 'auto') { bridge.call('page.auto', { on: !S.autoPage.on, n: S.autoPage.n }); return; }
+      if (tab && !tab.querySelector('input')) bridge.call('page.select', { page: pid });
+    });
+    this.pages.addEventListener('dblclick', e => {
+      const tab = (e.target as HTMLElement).closest('.ptab[data-page]') as HTMLElement | null; if (!tab || tab.querySelector('input')) return;
+      const nm = tab.querySelector('.nm') as HTMLElement; const old = nm.textContent ?? '';
+      const inp = h(`<input type="text" value="${esc(old)}" spellcheck="false">`) as HTMLInputElement; nm.replaceWith(inp); inp.focus(); inp.select();
+      const done = (commit: boolean) => { const v = inp.value.trim(); if (commit && v && v !== old) bridge.call('page.rename', { page: +tab.dataset.page!, name: v }); else { const back = h(`<span class="nm">${esc(old)}</span>`); inp.replaceWith(back); } };
+      inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); done(true); } else if (ev.key === 'Escape') done(false); ev.stopPropagation(); });
+      inp.addEventListener('blur', () => done(true));
+    });
+    this.pages.addEventListener('change', e => { const t = e.target as HTMLInputElement; if (t.dataset.pin === 'n' && this.S) { const n = parseInt(t.value, 10); if (n >= 1) bridge.call('page.auto', { on: this.S.autoPage.on, n }); } });
+    this.pages.addEventListener('dragstart', e => { const tab = (e.target as HTMLElement).closest('.ptab[data-page]') as HTMLElement | null; if (!tab || !e.dataTransfer) return; e.dataTransfer.setData(DRAG_PAGE, tab.dataset.page!); e.dataTransfer.effectAllowed = 'move'; });
+    this.pages.addEventListener('dragover', e => { const tab = (e.target as HTMLElement).closest('.ptab[data-page]') as HTMLElement | null; if (tab && e.dataTransfer?.types.includes(DRAG_PAGE)) { e.preventDefault(); tab.classList.add('dragover'); } });
+    this.pages.addEventListener('dragleave', e => { (e.target as HTMLElement).closest?.('.ptab')?.classList.remove('dragover'); });
+    this.pages.addEventListener('drop', e => {
+      const tab = (e.target as HTMLElement).closest('.ptab[data-page]') as HTMLElement | null; if (!tab || !e.dataTransfer?.types.includes(DRAG_PAGE)) return;
+      e.preventDefault(); tab.classList.remove('dragover'); const from = +e.dataTransfer.getData(DRAG_PAGE); const S = this.S; if (!S || from === +tab.dataset.page!) return;
+      const index = S.pages.findIndex(p => p.id === +tab.dataset.page!); bridge.call('page.moveTo', { page: from, index });
+    });
+  }
+  private confirmRemove(pid: number) {
+    const S = this.S; if (!S) return; const p = S.pages.find(x => x.id === pid); if (!p) return;
+    if (p.charts === 0) { bridge.call('page.remove', { page: pid }); return; }
+    const other = S.pages.find(x => x.id !== pid)?.name ?? '';
+    const dlg = h(`<div class="modal-bg"><div class="modal" role="dialog"><div class="lblh">REMOVE PAGE</div><div class="muted11">${esc(p.name)}: 차트 ${p.charts}개가 ${esc(other)}(으)로 옮겨집니다. 삭제되지 않습니다.</div><div class="btns"><button class="pill h30" data-b="cancel">CANCEL</button><button class="pill h30 primary" data-b="ok">REMOVE PAGE</button></div></div></div>`);
+    dlg.addEventListener('click', e => { const b = (e.target as HTMLElement).closest('[data-b]') as HTMLElement | null; if (b?.dataset.b === 'ok') bridge.call('page.remove', { page: pid }); if (b || e.target === dlg) dlg.remove(); });
+    document.body.append(dlg);
+  }
+  private renderPages(S: State) {
+    if (!this.pagesBound) this.bindPages();
+    const cur = S.pages.find(p => p.id === S.activePage); const cols = cur?.columns ?? 1;
+    const tabs = S.pages.map(p => `<button class="ptab${p.id === S.activePage ? ' on' : ''}" data-page="${p.id}" draggable="true" title="클릭: 보기 · 더블클릭: 이름 바꾸기 · 드래그: 순서"><span class="nm">${esc(p.name)}</span><span class="n">${p.charts}</span>${p.id === S.activePage && S.pages.length > 1 ? `<span class="x" data-pact="remove" title="페이지 제거 (차트는 다른 페이지로)">${I.close(10)}</span>` : ''}</button>`).join('');
+    this.pages.innerHTML = `<div class="ptabs">${tabs}<button class="ptab add" data-pact="add" title="새 페이지 (Ctrl+PageDown/PageUp: 이동)">+</button></div><span class="sp"></span><span class="lbl-in">GRID</span><button class="pill h24${cols === 1 ? ' on' : ''}" data-pact="cols1">1 COL</button><button class="pill h24${cols === 2 ? ' on' : ''}" data-pact="cols2">2 COL</button><span class="lbl-in">AUTO PAGE</span><button class="pill h24${S.autoPage.on ? ' on' : ''}" data-pact="auto" title="차트가 n개를 넘으면 새 페이지에">${S.autoPage.on ? 'ON' : 'OFF'}</button><span class="in mini" style="width:36px"><input data-pin="n" value="${S.autoPage.n}" title="페이지당 차트 수"></span>`;
+    this.grid.classList.toggle('cols2', cols === 2);
+  }
+
+  setState(S: State, charts = S.charts, tables = S.tables) {
     this.S = S;
-    const ids = new Set(S.charts.map(c => c.id));
+    const ids = new Set(charts.map(c => c.id));
     for (const [id, pv] of this.plots) if (!ids.has(id)) { pv.dispose(); pv.el.remove(); this.plots.delete(id); }
     const frag: HTMLElement[] = [];
-    S.charts.forEach((c, i) => {
+    charts.forEach((c, i) => {
       let pv = this.plots.get(c.id);
       if (!pv) { pv = new PlotView(c, S.plot); pv.onActivate = () => { if (this.S?.activeChart !== c.id) bridge.call('setActive', { chart: c.id }); }; this.plots.set(c.id, pv); }
-      pv.el.dataset.index = String(i + 1);
+      pv.el.dataset.index = String(S.charts.indexOf(c) + 1);
       pv.update(c, S.plot);
-      pv.el.classList.toggle('active', S.activeChart === c.id && S.charts.length > 1);
+      pv.el.classList.toggle('active', S.activeChart === c.id && charts.length > 1);
       pv.el.classList.toggle('detail', c.detailOf != null);
-      frag.push(pv.el);
+      frag.push(pv.el); void i;
     });
-    const tids = new Set(S.tables.map(t => t.id));
+    const tids = new Set(tables.map(t => t.id));
     for (const [id, tv] of this.tables) if (!tids.has(id)) { tv.el.remove(); this.tables.delete(id); }
-    const tels = S.tables.map(t => { let tv = this.tables.get(t.id); if (!tv) { tv = new TableView(t); this.tables.set(t.id, tv); } tv.update(t); return tv.el; });
-    const empty = S.charts.length === 0 && S.tables.length === 0;
+    const tels = tables.map(t => { let tv = this.tables.get(t.id); if (!tv) { tv = new TableView(t); this.tables.set(t.id, tv); } tv.update(t); return tv.el; });
+    const empty = charts.length === 0 && tables.length === 0;
     this.zone.classList.toggle('empty', empty);
     const rule = `<span class="dz-tools"><span class="dz-l">DROP</span><button class="pill h24${S.dropMode !== 'each' ? ' on' : ''}" data-a="unit" title="파일·그룹 드롭: 단위별 Y축으로 차트 1개 (정수·불리언은 디지털 레인)">BY UNIT</button><button class="pill h24${S.dropMode === 'each' ? ' on' : ''}" data-a="each" title="파일·그룹 드롭: 채널마다 차트">PER CHANNEL</button><button class="pill h24" data-a="table" title="활성 차트의 채널(없으면 선택 채널)로 값 테이블">+ TABLE</button></span>`;
-    this.zone.innerHTML = empty
-      ? `${I.lineC(24)}<div style="margin-top:8px">채널·그룹·파일을 끌어다 놓으세요</div><div class="hints">그룹/파일 드롭 · 바로 차트      더블클릭 · 새 차트      Ctrl+클릭으로 두 채널 선택 후 드롭 · XY 차트      Alt+드롭 · 값 테이블<br>휠 · 줌      드래그 · 이동      오른쪽 드래그 · 영역 확대 (Shift = X만, Ctrl = Y만)      더블클릭 · 전체      Backspace · 줌 되돌리기<br>클릭 · 커서 A      Shift+클릭 · 커서 B      Ctrl+B · 밴드 커서      차트 메뉴 ⋯ · 상세 차트 연결 · 내보내기</div>${rule}`
+    if (WIN > 0) this.zone.innerHTML = empty ? `${I.lineC(24)}<div style="margin-top:8px">이 창의 차트가 모두 주 창으로 돌아갔습니다</div>` : `${I.lineC()}<span>차트 메뉴(⋯) → 주 창으로 · 창을 닫으면 모든 차트가 주 창으로</span>`;
+    else this.zone.innerHTML = empty
+      ? `${I.lineC(24)}<div style="margin-top:8px">채널·그룹·파일을 끌어다 놓으세요</div><div class="hints">그룹/파일 드롭 · 바로 차트      더블클릭 · 새 차트      Ctrl+클릭으로 두 채널 선택 후 드롭 · XY 차트      Alt+드롭 · 값 테이블<br>휠 · 줌      드래그 · 이동      오른쪽 드래그 · 영역 확대 (Shift = X만, Ctrl = Y만)      더블클릭 · 전체      Backspace · 줌 되돌리기<br>클릭 · 커서 A      Shift+클릭 · 커서 B      Ctrl+B · 밴드 커서      차트 메뉴 ⋯ · 상세 차트 연결 · 새 창으로 · 내보내기</div>${rule}`
       : `${I.lineC()}<span>여기에 채널·그룹을 놓으면 새 차트 <span style="color:var(--faint)">·</span> X축 영역에 놓으면 시간 채널로 지정</span>${rule}`;
-    const want = [...tels, ...frag, this.zone];
+    // chart cards live in the grid (1 / 2 columns); tables above it; pages strip first (main window only)
+    frag.forEach((el, i) => { if (this.grid.children[i] !== el) this.grid.insertBefore(el, this.grid.children[i] ?? null); });
+    while (this.grid.children.length > frag.length) this.grid.lastElementChild!.remove();
+    if (WIN === 0) this.renderPages(S);
+    const want = [...(WIN === 0 ? [this.pages] : []), ...tels, this.grid, this.zone];
     want.forEach((el, i) => { if (this.el.children[i] !== el) this.el.insertBefore(el, this.el.children[i] ?? null); });
     while (this.el.children.length > want.length) this.el.lastElementChild!.remove();
   }

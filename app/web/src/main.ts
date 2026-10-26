@@ -1,6 +1,6 @@
 // App shell: header (brand · mode pills · tools · LED) / main (mode-specific) / footer; state fan-out; keyboard; file drop; test hooks.
 import { Analysis } from './analysis';
-import { bridge } from './bridge';
+import { bridge, WIN } from './bridge';
 import { Help } from './help';
 import { I } from './icons';
 import { NavMode } from './navmode';
@@ -24,12 +24,18 @@ let frameInfo = '';
 
 function renderHeader() {
   if (!S) return;
-  const mode = (m: string) => `<a data-mode="${m}" class="${S!.mode === m ? 'on' : ''}">${m}</a>`;
+  const mode = (m: string, icon: string) => `<button type="button" class="tool mode${S!.mode === m ? ' on' : ''}" data-mode="${m}" aria-label="${m}" aria-pressed="${S!.mode === m}" title="${m} (Ctrl+${m === 'NAVIGATOR' ? 1 : m === 'VIEW' ? 2 : m === 'ANALYSIS' ? 3 : 4})">${icon}<span>${m}</span></button>`;
   const tool = (a: string, icon: string, label: string, title: string, disabled = false) => `<button type="button" class="tool" data-a="${a}" aria-label="${label}" title="${title}"${disabled ? ' disabled' : ''}>${icon}<span>${label}</span></button>`;
   const app = (S as any).app ?? { versionText: '', beta: false };
-  hdr.innerHTML = `<div class="hdr-brand"><div class="hdr-logo" data-a="about" title="About Nexys VIEW (F1)"><img src="brand/Logo.png" alt="Nexys VIEW"></div><div class="hdr-name"><small>${esc((app.versionText || '').toUpperCase())}${S.developer ? ' · DEVELOPER' : ''}</small></div></div>
-    <nav aria-label="Mode" class="hdr-nav"><div class="modes">${mode('NAVIGATOR')}${mode('VIEW')}${S.legacyTabs ? mode('ANALYSIS') + mode('REPORT') : ''}</div></nav>
-    <div class="hdr-tools">${tool('open', I.folder(), 'OPEN', 'Open file (Ctrl+O)')}${tool('save', I.save(), 'SAVE', 'Save all channels as TDMS (Ctrl+S)')}<div class="vsep"></div>${tool('undo', I.undo(), 'UNDO', S.undo.can ? `Undo ${S.undo.name} (Ctrl+Z)` : 'Undo (Ctrl+Z)', !S.undo.can)}${tool('redo', I.redo(), 'REDO', 'Redo (Ctrl+Y)', !S.undo.canRedo)}<div class="vsep"></div>${tool('theme', S.theme === 'dark' ? I.sun() : I.theme(), 'THEME', 'Toggle light / dark chrome (Ctrl+T)')}${tool('plot', I.plot(), 'PLOT · ' + S.plot.toUpperCase(), 'Toggle dark / light plot (Ctrl+P)')}<div class="vsep"></div>${tool('dev', I.info(), 'DEV', 'Developer mode (Ctrl+D)')}</div>
+  if (WIN > 0) {
+    const n = S.charts.filter(c => (c.windowId || 0) === WIN).length;
+    hdr.innerHTML = `<div class="hdr-brand"><div class="hdr-logo" data-a="about" title="About Nexys VIEW (F1)"><img src="brand/Logo.png" alt="Nexys VIEW"></div><div class="hdr-name"><small>${esc((app.versionText || '').toUpperCase())}</small></div></div>
+      <div class="hdr-tools"><span class="win-title">WINDOW ${WIN} · ${n} chart${n !== 1 ? 's' : ''}</span><div class="vsep"></div>${tool('returnAll', I.undo(), 'RETURN ALL', '모든 차트를 주 창으로 (창 닫기와 같음)')}<div class="vsep"></div>${tool('theme', S.theme === 'dark' ? I.sun() : I.theme(), 'THEME', 'Light / dark (Ctrl+T)')}${tool('plot', I.plot(), 'PLOT · ' + S.plot.toUpperCase(), 'Plot light / dark (Ctrl+P)')}
+      <div class="led-pill"><span class="led ${S.status.led}"></span><span class="led-text">${S.status.led.toUpperCase()}</span></div></div>`;
+    return;
+  }
+  hdr.innerHTML = `<div class="hdr-brand"><div class="hdr-logo" data-a="about" title="About Nexys VIEW (F1)"><img src="brand/Logo.png" alt="Nexys VIEW"></div><div class="hdr-name"><small>${esc((app.versionText || '').toUpperCase())}</small></div></div>
+    <div class="hdr-tools"><nav aria-label="Mode" class="tools-modes">${mode('NAVIGATOR', I.list(15))}${mode('VIEW', I.lineC(15))}${S.legacyTabs ? mode('ANALYSIS', I.sliders(15)) + mode('REPORT', I.file(15)) : ''}</nav><div class="vsep"></div>${tool('open', I.folder(), 'OPEN', 'Open file (Ctrl+O)')}${tool('save', I.save(), 'SAVE', 'Save all channels as TDMS (Ctrl+S)')}<div class="vsep"></div>${tool('undo', I.undo(), 'UNDO', S.undo.can ? `Undo ${S.undo.name} (Ctrl+Z)` : 'Undo (Ctrl+Z)', !S.undo.can)}${tool('redo', I.redo(), 'REDO', 'Redo (Ctrl+Y)', !S.undo.canRedo)}<div class="vsep"></div>${tool('theme', S.theme === 'dark' ? I.sun() : I.theme(), 'THEME', 'Toggle light / dark chrome (Ctrl+T)')}${tool('plot', I.plot(), 'PLOT · ' + S.plot.toUpperCase(), 'Toggle dark / light plot (Ctrl+P)')}<div class="vsep"></div></div>
     <div class="vsep"></div><button type="button" class="tool icon" data-a="help" aria-label="HELP" title="사용 가이드 · 기능 투어 (F1)">${I.help()}</button>
     <div class="led-pill"><span class="led ${S.status.led}"></span><span class="led-text">${S.status.led.toUpperCase()}</span></div>`;
 }
@@ -39,6 +45,7 @@ hdr.addEventListener('click', e => {
   const a = (t.closest('[data-a]') as HTMLElement | null)?.dataset.a; if (!a) return;
   if (a === 'about') { showAbout(); return; }
   if (a === 'help') { help.show(); return; }
+  if (a === 'returnAll') { bridge.call('window.returnAll', { id: WIN }); return; }
   if (a === 'open') bridge.call('openDialog'); else if (a === 'save') bridge.call('saveDialog'); else if (a === 'undo') bridge.call('undo'); else if (a === 'redo') bridge.call('redo');
   else if (a === 'theme') bridge.call('setTheme', { theme: S?.theme === 'dark' ? 'light' : 'dark' }); else if (a === 'plot') bridge.call('setPlot', { plot: S?.plot === 'dark' ? 'light' : 'dark' }); else if (a === 'dev') bridge.call('setDeveloper', { on: !S?.developer });
 });
@@ -46,7 +53,7 @@ function setMode(m: string) { bridge.call('setMode', { mode: m }); }
 
 function renderMain() {
   if (!S) return;
-  const want: HTMLElement[] = S.mode === 'NAVIGATOR' ? [nav.el, navMode.el, props.el] : S.mode === 'ANALYSIS' ? [nav.el, analysis.fns, analysis.center, analysis.params] : S.mode === 'REPORT' ? [report.left, report.center, report.right] : [nav.el, view.el, props.el];
+  const want: HTMLElement[] = WIN > 0 ? [view.el] : S.mode === 'NAVIGATOR' ? [nav.el, navMode.el, props.el] : S.mode === 'ANALYSIS' ? [nav.el, analysis.fns, analysis.center, analysis.params] : S.mode === 'REPORT' ? [report.left, report.center, report.right] : [nav.el, view.el, props.el];
   want.forEach((el, i) => { if (main.children[i] !== el) main.insertBefore(el, main.children[i] ?? null); });
   while (main.children.length > want.length) main.lastElementChild!.remove();
 }
@@ -54,25 +61,29 @@ function renderFooter() {
   if (!S) return;
   (ftr.querySelector('.d') as HTMLElement).className = 'd ' + S.status.led;
   ftr.querySelector('.txt')!.textContent = S.status.text || (S.files.length ? `${S.files.length} files open · ${S.files.reduce((a, f) => a + f.channelCount, 0)} channels` : 'Open a file or drop it onto the window');
-  ftr.querySelector('.r')!.textContent = frameInfo;
+  ftr.querySelector('.r')!.textContent = (S.developer ? 'DEVELOPER · ' : '') + frameInfo;
 }
 document.addEventListener('nx-frame', (e: any) => {
   const d = e.detail; if (!d?.stats) return;
   frameInfo = `frame ${d.ms.toFixed(1)} ms · ${fmtInt(d.stats.samples)} samples · pyramid L${d.stats.level}`;
-  ftr.querySelector('.r')!.textContent = frameInfo;
+  ftr.querySelector('.r')!.textContent = (S?.developer ? 'DEVELOPER · ' : '') + frameInfo;
 });
 
 function applyState(next: State) {
   const prevMode = S?.mode; S = next;
   document.documentElement.dataset.theme = S.theme; document.documentElement.dataset.plot = S.plot;
   renderHeader(); renderMain(); renderFooter();
-  help.setState(S);
+  if (WIN === 0) help.setState(S);
   nav.setState(S);
-  if (S.mode === 'VIEW') { view.setState(S); props.setState(S); }
+  // 0.9.4: this page shows the charts of its window; the main window shows the active page only
+  const st = S; const vcharts = st.charts.filter(c => (c.windowId || 0) === WIN && (WIN > 0 || c.pageId === st.activePage));
+  const vtables = WIN > 0 ? [] : st.tables.filter(t => t.pageId === st.activePage);
+  if (WIN > 0) { view.setState(S, vcharts, vtables); return; }
+  if (S.mode === 'VIEW') { view.setState(S, vcharts, vtables); props.setState(S); }
   else if (S.mode === 'NAVIGATOR') { navMode.setState(S); props.setState(S); }
   else if (S.mode === 'ANALYSIS') analysis.setState(S);
   else if (S.mode === 'REPORT') report.setState(S);
-  if (prevMode !== S.mode) { if (S.mode === 'VIEW') { view.setState(S); for (const pv of view.plots.values()) pv.request(); } if (S.mode === 'REPORT') report.refreshPage(); }
+  if (prevMode !== S.mode) { if (S.mode === 'VIEW') { view.setState(S, vcharts, vtables); for (const pv of view.plots.values()) pv.request({ adopt: true }); } if (S.mode === 'REPORT') report.refreshPage(); }
 }
 bridge.on('state', m => { const st = m.state as State; if (!st.files && S) st.files = S.files; else if (!st.files) st.files = []; applyState(st); });
 bridge.on('undo', m => { if (!S) return; S.undo = { can: m.can, name: m.name, canRedo: m.canRedo }; renderHeader(); });
@@ -116,8 +127,9 @@ document.addEventListener('keydown', e => {
   if (k === 'z') { e.preventDefault(); bridge.call('undo'); } else if (k === 'y') { e.preventDefault(); bridge.call('redo'); }
   else if (k === 'o') { e.preventDefault(); bridge.call(e.shiftKey ? 'openPluginDialog' : 'openDialog'); } else if (k === 's') { e.preventDefault(); bridge.call('saveDialog'); }
   else if (k === 't') { e.preventDefault(); bridge.call('setTheme', { theme: S?.theme === 'dark' ? 'light' : 'dark' }); } else if (k === 'p') { e.preventDefault(); bridge.call('setPlot', { plot: S?.plot === 'dark' ? 'light' : 'dark' }); }
-  else if (k === 'd') { e.preventDefault(); bridge.call('setDeveloper', { on: !S?.developer }); }
-  else if (k === '1') setMode('NAVIGATOR'); else if (k === '2') setMode('VIEW'); else if (k === '3' && S?.legacyTabs) setMode('ANALYSIS'); else if (k === '4' && S?.legacyTabs) setMode('REPORT');
+  else if (k === 'd' && e.shiftKey) { e.preventDefault(); bridge.call('setDeveloper', { on: !S?.developer }); }
+  else if ((e.key === 'PageDown' || e.key === 'PageUp') && WIN === 0 && S) { e.preventDefault(); const st = S; const i = st.pages.findIndex(p => p.id === st.activePage); const j = e.key === 'PageDown' ? i + 1 : i - 1; if (j >= 0 && j < st.pages.length) bridge.call('page.select', { page: st.pages[j].id }); }
+  else if (k === '1' && WIN === 0) setMode('NAVIGATOR'); else if (k === '2' && WIN === 0) setMode('VIEW'); else if (k === '3' && S?.legacyTabs) setMode('ANALYSIS'); else if (k === '4' && S?.legacyTabs) setMode('REPORT');
   else if (k === 'b') { e.preventDefault(); const pv = S ? view.plots.get(S.activeChart) ?? view.plots.values().next().value : undefined; if (pv) bridge.call('setCursorMode', { chart: pv.dto.id, mode: pv.dto.cursorMode === 'band' ? 'free' : 'band' }); }
 });
 
@@ -229,6 +241,34 @@ const test = {
   async tableCopy(table: number, r0: number, c0: number, r1: number, c1: number) { const tv = view.tables.get(table); if (!tv) throw new Error('no table ' + table); tv.select(r0, c0, r1, c1); tv.el.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 150)); return await tv.tsv(r0, c0, r1, c1); },
   tableInfo(table: number) { const tv = view.tables.get(table); if (!tv) return null; const el = tv.el; return { cursorRow: tv.dto.cursorRow, rows: tv.dto.rows, scrollTop: (el.querySelector('.tscroll') as HTMLElement).scrollTop, curVisible: !!el.querySelector('tr.cur'), rendered: el.querySelectorAll('tbody tr').length }; },
   async menu(chart: number, item: string) { view.plots.get(chart)!.menuAction(item); await new Promise(r => setTimeout(r, 120)); await settle(); return true; },
+  // ---- 0.9.4
+  pick(ids: string[]) { nav.setPicked(ids); return true; },
+  /** Start a drag on a NAVIGATOR channel row, move the pointer, read the preview card's rect (viewport px). */
+  async dragStartRow(channelId: string) { const row = nav.rowElement(channelId); if (!row) throw new Error('row not visible ' + channelId); const r = row.getBoundingClientRect(); const dt = new DataTransfer(); row.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt, clientX: r.left + 20, clientY: r.top + 10 })); (window as any).__dt = dt; await raf(); return this.dragPreview(); },
+  async dragMove(x: number, y: number) { document.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: (window as any).__dt, clientX: x, clientY: y })); await raf(); return this.dragPreview(); },
+  async dragEnd() { document.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: (window as any).__dt })); await raf(); return !document.querySelector('.drag-preview'); },
+  dragPreview() { const el = document.querySelector('.drag-preview') as HTMLElement | null; if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, right: r.right, bottom: r.bottom, text: el.textContent, vw: window.innerWidth, vh: window.innerHeight }; },
+  rowTops(ids: string[]) { return ids.map(id => { const el = nav.el.querySelector(`[data-ch="${CSS.escape(id)}"]`) as HTMLElement | null; return el ? { top: parseFloat(el.style.top), abs: getComputedStyle(el).position === 'absolute' } : null; }); },
+  /** Elements whose border / outline / left border uses an accent colour (should be 0 after 0.9.4). */
+  accentScan() {
+    const css = getComputedStyle(document.documentElement); const accents = ['--accent2', '--accent-line', '--accent'].map(v => css.getPropertyValue(v).trim()).filter(Boolean);
+    const toRgb = (c: string) => { const d = document.createElement('div'); d.style.color = c; document.body.append(d); const v = getComputedStyle(d).color; d.remove(); return v; };
+    const set = new Set(accents.map(toRgb)); const hits: string[] = [];
+    document.querySelectorAll<HTMLElement>('.card, .chart, .chart-h, .tbl, .help-note, .dropfx, .dropzone, .ds-card, .row-ch, .row-file, .ptab, .tool, .pill, .menu, .drag-preview, .tour-card, .tour-spot').forEach(el => {
+      const cs = getComputedStyle(el);
+      for (const k of ['borderTopColor', 'borderLeftColor', 'borderRightColor', 'borderBottomColor', 'outlineColor'] as const) { const w = k === 'outlineColor' ? cs.outlineWidth : cs[k.replace('Color', 'Width') as 'borderTopWidth']; if (set.has(cs[k]) && parseFloat(w) > 0 && cs.outlineStyle !== 'none') hits.push(el.className + ':' + k); }
+    });
+    return { accents: Array.from(set), hits };
+  },
+  pages() { return Array.from(document.querySelectorAll<HTMLElement>('.pages .ptab[data-page]')).map(b => ({ id: +b.dataset.page!, name: (b.querySelector('.nm') as HTMLElement)?.textContent, on: b.classList.contains('on') })); },
+  gridCols() { const g = view.el.querySelector('.charts'); return g ? (g.classList.contains('cols2') ? 2 : 1) : 0; },
+  async pageTabAction(page: number, act: string) { const b = view.el.querySelector(`.ptab[data-page="${page}"]`) as HTMLElement | null; if (!b) throw new Error('no tab ' + page); if (act === 'click') b.click(); else if (act === 'dblclick') b.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); else if (act === 'remove') (b.querySelector('[data-pact=remove]') as HTMLElement)?.click(); await new Promise(r => setTimeout(r, 80)); await settle(); return true; },
+  async renameInput(name: string) { const inp = view.el.querySelector('.ptab input') as HTMLInputElement | null; if (!inp) throw new Error('no rename input'); inp.value = name; inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await new Promise(r => setTimeout(r, 80)); await settle(); return true; },
+  async modalButton(which: string) { const b = document.querySelector(`.modal [data-b="${which}"]`) as HTMLElement | null; if (!b) throw new Error('no modal button ' + which); b.click(); await new Promise(r => setTimeout(r, 80)); await settle(); return true; },
+  /** Pan steps; returns the epoch ms at which each step's frame request was sent (cross-window latency). */
+  async panClock(chart: number, n: number, frac = 0.05) { const pv = view.plots.get(chart)!; const out: number[] = []; for (let i = 0; i < n; i++) { const before = pv.frames; out.push(performance.timeOrigin + performance.now()); pv.panBy(frac); await waitFrames(pv, before); await new Promise(r => setTimeout(r, 40)); } return out; },
+  frameClock(chart: number) { const pv = view.plots.get(chart); return pv ? { epoch: pv.lastPaintEpoch, frames: pv.frames, xmin: pv.view.xmin, xmax: pv.view.xmax } : null; },
+  async gripDragOut(chart: number) { const pv = view.plots.get(chart)!; const grip = pv.el.querySelector('.grip') as HTMLElement; const dt = new DataTransfer(); grip.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt })); const ev = new DragEvent('dragend', { bubbles: true, dataTransfer: dt, clientX: -40, clientY: 200, screenX: 100, screenY: 100 }); grip.dispatchEvent(ev); await new Promise(r => setTimeout(r, 300)); await settle(); return true; },
   /** Feature tour at step n / help guide section (captures, gates). */
   async tour(n = 0) { await help.startTour(n); await new Promise(r => setTimeout(r, 250)); await settle(); return !!document.querySelector('.tour-card'); },
   async help(section = 'start') { help.show(section); await new Promise(r => setTimeout(r, 100)); return !!document.querySelector('.help-pane'); },

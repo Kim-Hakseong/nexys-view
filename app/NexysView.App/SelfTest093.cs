@@ -20,7 +20,7 @@ public static partial class SelfTest
         var e = w.Engine; string root = TdmsRoot(); var sw = Stopwatch.StartNew();
         e.Theme = "light"; e.Plot = "dark"; e.ShowLegacyTabs = false; e.Touch();
         await JS(w, "await nx.test.settle(); return true;");
-        string tabs = (await JS(w, "return Array.from(document.querySelectorAll('.modes a')).map(a => a.textContent).join(',');")).ToString();
+        string tabs = (await JS(w, "return Array.from(document.querySelectorAll('.tools-modes .tool.mode, .modes a')).map(a => a.textContent.trim()).join(',');")).ToString();
         GB("tabs_navigator_view_only", tabs == "NAVIGATOR,VIEW", tabs);
         // ---- 1) group drop: a log file's "Channel Group 1" node → one chart, y axis per unit, steps as lanes, x = System Time
         string uf = Path.Combine(root, "work", "userfiles"); var logs = Directory.GetFiles(uf, "*.tdms").OrderBy(f => f).ToList();
@@ -40,6 +40,8 @@ public static partial class SelfTest
         GB("group_drop_per_channel", e.Charts.Count - before == expect, $"charts +{e.Charts.Count - before} expected {expect}");
         G("memory_ws_20_charts_mb", Process.GetCurrentProcess().WorkingSet64 / 1048576.0, "MB");
         foreach (var c in e.Charts.Where(c => c.Id != chart).ToList()) e.RemoveChart(c.Id, false);
+        foreach (var p in e.Pages.Where(p => p.Id != e.Get(chart)!.PageId).ToList()) e.RemovePage(p.Id);   // the per-channel drop auto-split pages; back to the chart's page
+        e.SelectPage(e.Get(chart)!.PageId);
         await JS(w, "await nx.test.settle(); return true;"); GC.Collect(2, GCCollectionMode.Aggressive, blocking: true, compacting: true); GC.WaitForPendingFinalizers(); await Task.Delay(200);
         G("memory_ws_after_20_removed_mb", Process.GetCurrentProcess().WorkingSet64 / 1048576.0, "MB");
         e.DropMode = "unit"; e.ActiveChart = chart; e.TouchChart(chart); await JS(w, "await nx.test.settle(); return true;");

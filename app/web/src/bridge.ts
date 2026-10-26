@@ -72,3 +72,5 @@ function mock(cmd: string, _args: any) {
 }
 
 export const bridge = new Bridge();
+/** 0.9.4: 0 = main window, N = detached chart window (index.html?win=N). */
+export const WIN = Number(new URLSearchParams(location.search).get('win') || 0);

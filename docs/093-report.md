@@ -96,6 +96,10 @@ NAVIGATOR의 파일 행·그룹 행·이름 노드 행을 VIEW의 드롭 존(또
 | 단위 테스트 | 514/514 (work/bench/gate_tests_093.txt) |
 | `--stress --iter 200` (NAVIGATOR/VIEW 순환, 드롭 1000·차트 닫기 200·파일 재열기) | 예외 0 · UI 정지(300 ms) 0 · 최대 정지 0 ms · 앱 메모리 +26 MB · WebView2 516 MB · 425 s (work/beta/stress_093/gates.txt) |
 
+## 3.1 배포
+- `app/dist/NexysView-0.9.3-beta-setup.exe` 61.8 MB (61,786,571 B), `app/dist/NexysView-0.9.3-beta-portable.exe` 82.2 MB (82,186,307 B). 무인 설치(`/VERYSILENT /CURRENTUSER`, work/beta/install_test/0.9.3) → 설치본 `--fresh` 실행(제목 "Nexys VIEW 0.9.3 beta") → 무인 언인스톨(폴더 제거) 확인. 포터블 `--fresh` 실행 제목 확인.
+- 저장소 https://github.com/Kim-Hakseong/nexys-view 커밋 5bd34e9, 태그 v0.9.3-beta, Release https://github.com/Kim-Hakseong/nexys-view/releases/tag/v0.9.3-beta (두 파일 첨부). 내보내기 검사: 타사 이름 0건, 바이너리 0건. README는 ANALYSIS/REPORT 절을 빼고 VIEW·PROPERTIES·값 테이블·내보내기 절과 단축키 표를 새로 썼다(캡처 docs/images/detail.png, table.png).
+
 ## 4. 구현 메모
 - 페이지는 프레임 헤더의 x 창을 채택한다(`PlotView.request({adopt})` — invalidate/resize/링크 전파 때 로컬 xmin/xmax를 보내지 않음). 이전에는 invalidate 뒤 요청이 페이지의 옛 창을 엔진에 다시 써서 ZoomFull·링크가 되돌아갈 수 있었다.
 - 밴드 드래그: 페이지가 로컬 밴드를 그리며 `{cmd:'band'}`를 즉시 전송(2 ms 병합) → `Engine.SetBand(record:false)` → 개요·상세 `ChartChanged` → 두 프레임 병렬. 놓으면 `commit:true`(되돌리기 1건, 스냅샷 1번).

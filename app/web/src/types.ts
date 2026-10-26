@@ -19,7 +19,8 @@ export interface ChartDto {
   alignMode: string; alignOffsetMs: number; grid: boolean; legend: boolean; isXY: boolean; cursorA: CursorDto; cursorB: CursorDto;
   xChannel: { id: string; name: string; unit: string } | null; suggestedX: { id: string; name: string; unit: string } | null; curves: CurveDto[];
   // 0.9.3
-  cursorMode: string; band: BandDto; linkX: boolean; linkKey: string | null; detailOf: number | null; hasDetail: boolean; zoomHistory: number; axes: AxisDto[];
+  cursorMode: string; band: BandDto; linkX: boolean; linkKey: string | null; detailOf: number | null; detailOfName: string | null; hasDetail: boolean; zoomHistory: number; axes: AxisDto[];
+  pageId: number; windowId: number;
 }
 export interface PropsDto {
   id: string; name: string; group: string; file: string; unit: string; dataType: string; length: number; isText: boolean; xKind: string; xStart: number; xIncrement: number; xUnit: string;
@@ -33,9 +34,12 @@ export interface AnalysisDto {
   results: { id: string; name: string; unit: string; length: number; meta: string }[]; stats: any; lastRunMs: number; subtitle: string; validity: { ok: boolean; text: string }; hasPreview: boolean; canShow: boolean;
 }
 export interface ReportDto { version: number; blocks: { idx: number; kind: string; text: string; chartId: number; name: string; summary: string }[]; charts: { id: number; name: string }[]; }
-export interface TableDto { id: number; channels: { id: string; name: string; unit: string; length: number }[]; rows: number; cursorRow: number | null; }
+export interface PageDto { id: number; name: string; columns: number; charts: number; }
+export interface WindowDto { id: number; title: string; charts: number; }
+export interface TableDto { id: number; pageId: number; channels: { id: string; name: string; unit: string; length: number }[]; rows: number; cursorRow: number | null; }
 export interface State {
-  theme: string; plot: string; mode: string; developer: boolean; legacyTabs: boolean; dropMode: string; status: { text: string; led: string }; undo: { can: boolean; name: string | null; canRedo: boolean };
+  theme: string; plot: string; mode: string; developer: boolean; legacyTabs: boolean; dropMode: string;
+  pages: PageDto[]; activePage: number; autoPage: { on: boolean; n: number }; windows: WindowDto[]; status: { text: string; led: string }; undo: { can: boolean; name: string | null; canRedo: boolean };
   files: FileDto[]; charts: ChartDto[]; sparks: Record<string, number[]>; activeChart: number; selected: string | null; selectedFile: string | null; selectedFiles: string[];
   align: { mode: string; offsetMs: number }; common: string[]; props: PropsDto | null; fileProps: FileDto | null; analysis: AnalysisDto; report: ReportDto; preview: ChartDto | null;
   tables: TableDto[]; cache: { ready: number; total: number; mb: number };

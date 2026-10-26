@@ -32,9 +32,9 @@ export class Analysis {
       else if (a === 'useSel') { const id = this.S?.selected; if (id) bridge.call('analysis.inputs', { channels: [id] }); }
     });
     this.resHead.addEventListener('click', e => { const a = ((e.target as HTMLElement).closest('[data-a]') as HTMLElement | null)?.dataset.a; if (a === 'show') bridge.call('analysis.show'); });
-    this.params.addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('application/x-nexys-channels')) { e.preventDefault(); this.params.style.borderColor = 'var(--accent2)'; } });
-    this.params.addEventListener('dragleave', () => { this.params.style.borderColor = ''; });
-    this.params.addEventListener('drop', e => { this.params.style.borderColor = ''; const d = e.dataTransfer?.getData('application/x-nexys-channels'); if (!d) return; e.preventDefault(); const chans = JSON.parse(d) as { id: string }[]; bridge.call('analysis.inputs', { channels: chans.map(c => c.id) }); });
+    this.params.addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('application/x-nexys-channels')) { e.preventDefault(); this.params.classList.add('over'); } });
+    this.params.addEventListener('dragleave', () => { this.params.classList.remove('over'); });
+    this.params.addEventListener('drop', e => { this.params.classList.remove('over'); const d = e.dataTransfer?.getData('application/x-nexys-channels'); if (!d) return; e.preventDefault(); const chans = JSON.parse(d) as { id: string }[]; bridge.call('analysis.inputs', { channels: chans.map(c => c.id) }); });
   }
   run() { bridge.call('analysis.run'); }
 
