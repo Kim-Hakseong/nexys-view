@@ -31,5 +31,7 @@ export const I = {
   table: (s = 14) => wrap('<path d="M3 5h18v14H3zM3 10h18M3 15h18M9 5v14M15 5v14"></path>', s),
   file: (s = 14) => wrap('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6"></path>', s),
   help: (s = 15) => wrap('<circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path>', s),
+  link: (s = 12, c = 'currentColor') => wrap('<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"></path><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"></path>', s, c),
+  more: (s = 14) => wrap('<circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>', s),
   check: (s = 12) => wrap('<path d="m5 12 5 5L20 7"></path>', s),
 };

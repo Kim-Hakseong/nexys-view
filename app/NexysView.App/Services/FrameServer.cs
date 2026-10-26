@@ -49,7 +49,48 @@ public sealed class FrameServer
 
     /// <summary>Compute a frame. <paramref name="W"/> = plot width in device pixels (columns), <paramref name="plotH"/> = plot height
     /// in CSS pixels (tick count), <paramref name="buf"/> receives the Float32 payload.</summary>
-    public Result Compute(Chart chart, int W, double plotH, double dpr, float[] buf)
+    public Result Compute(Chart chart, int W, double plotH, double dpr, float[] buf) => Compute(chart, W, plotH, dpr, buf, null);
+
+    /// <summary>Band statistics over [x0, x1]: exact min/max (pyramid) + mean/RMS from at most 4096 strided samples (approx flag when strided).</summary>
+    (double min, double max, double mean, double rms, long n, bool approx)? BandStats(Curve c, PlotModel m, double x0, double x1)
+    {
+        var ch = c.Channel; var p = ch.Pyramid; if (p == null || ch.Length == 0) return null;
+        double ia, ib;
+        if (c.XMonotonic && c.XChannel != null) { ia = XIndex.IndexOf(c.XChannel, (x0 - c.XOffset) / c.XScale); ib = XIndex.IndexOf(c.XChannel, (x1 - c.XOffset) / c.XScale); }
+        else { ia = ch.IndexOf(x0 - c.XOffset); ib = ch.IndexOf(x1 - c.XOffset); }
+        long a = Math.Max(0, (long)Math.Ceiling(Math.Min(ia, ib))), b = Math.Min(ch.Length - 1, (long)Math.Floor(Math.Max(ia, ib)));
+        if (b < a) return null;
+        long n = b - a + 1; long stride = Math.Max(1, n / 2048); int take = (int)((n + stride - 1) / stride);   // ≤ 2048 strided reads: bounded cost and bounded mapped-page residency
+        double sum = 0, sq = 0; long cnt = 0; double mn = double.PositiveInfinity, mx = double.NegativeInfinity;
+        if (stride == 1)
+        {
+            var vb = System.Buffers.ArrayPool<double>.Shared.Rent(take); int got = ch.Source.Read(a, vb.AsSpan(0, take));
+            for (int i = 0; i < got; i++) { double v = vb[i]; if (double.IsNaN(v)) continue; sum += v; sq += v * v; cnt++; if (v < mn) mn = v; if (v > mx) mx = v; }
+            System.Buffers.ArrayPool<double>.Shared.Return(vb);
+        }
+        else
+        {
+            Span<double> one = stackalloc double[1];
+            for (long i = a; i <= b; i += stride) { if (ch.Source.Read(i, one) != 1) continue; double v = one[0]; if (double.IsNaN(v)) continue; sum += v; sq += v * v; cnt++; }
+            Span<float> emn = stackalloc float[1], emx = stackalloc float[1];
+            p.Envelope(ch.Source, a, b + 1, 1, emn, emx, out _);
+            if (!float.IsNaN(emn[0])) { mn = emn[0]; mx = emx[0]; }
+        }
+        if (cnt == 0) return null;
+        return (mn, mx, sum / cnt, Math.Sqrt(sq / cnt), n, stride > 1);
+    }
+
+    static IEnumerable<double> LogTicks(double min, double max)
+    {
+        if (!(min > 0) || !(max > min)) yield break;
+        int d0 = (int)Math.Floor(Math.Log10(min)), d1 = (int)Math.Ceiling(Math.Log10(max));
+        bool fine = d1 - d0 <= 2;
+        for (int d = d0; d <= d1; d++)
+            foreach (var mant in fine ? new[] { 1.0, 2.0, 5.0 } : new[] { 1.0 })
+            { double v = mant * Math.Pow(10, d); if (v >= min * 0.999 && v <= max * 1.001) yield return v; }
+    }
+
+    public Result Compute(Chart chart, int W, double plotH, double dpr, float[] buf, (double x0, double x1)? bandRef)
     {
         var sw = Stopwatch.StartNew();
         var m = chart.Model;
@@ -69,9 +110,15 @@ public sealed class FrameServer
                 var (s0, s1) = SampleWindow(c, m);
                 int cols = Math.Min(W, 512);
                 p.Envelope(c.Channel.Source, s0, s1, cols, _mn.AsSpan(0, cols), _mx.AsSpan(0, cols), out _);
-                for (int i = 0; i < cols; i++) { if (float.IsNaN(_mn[i])) continue; if (_mn[i] < mn) mn = _mn[i]; if (_mx[i] > mx) mx = _mx[i]; }
+                for (int i = 0; i < cols; i++) { if (float.IsNaN(_mn[i])) continue; if (a.Log && _mx[i] <= 0) continue; float lo = a.Log && _mn[i] <= 0 ? _mx[i] : _mn[i]; if (lo < mn) mn = lo; if (_mx[i] > mx) mx = _mx[i]; }
             }
-            if (mn == double.PositiveInfinity) { mn = -1; mx = 1; }
+            if (mn == double.PositiveInfinity) { mn = a.Log ? 0.1 : -1; mx = a.Log ? 10 : 1; }
+            if (a.Log)
+            {
+                if (mn <= 0) mn = mx > 0 ? mx * 1e-3 : 0.1; if (mx <= mn) mx = mn * 10;
+                double lpad = (Math.Log10(mx) - Math.Log10(mn)) * 0.05; a.Min = Math.Pow(10, Math.Log10(mn) - lpad); a.Max = Math.Pow(10, Math.Log10(mx) + lpad);
+                continue;
+            }
             if (mx - mn < 1e-12) { mn -= 0.5; mx += 0.5; }
             double pad = (mx - mn) * 0.05;
             a.Min = mn - pad; a.Max = mx + pad;
@@ -81,9 +128,9 @@ public sealed class FrameServer
         int yt = TickTarget(plotH, 46);
         var axesDto = axes.Select((a, i) => new
         {
-            id = a.Id, right = a.Right, unit = a.Unit, min = a.Min, max = a.Max,
+            id = a.Id, right = a.Right, unit = a.Unit, min = a.Min, max = a.Max, log = a.Log && a.Min > 0,
             color = axes.Count > 1 ? m.Curves.FirstOrDefault(c => c.Axis == a)?.ColorIndex : (int?)null,
-            ticks = Ticks.Generate(a.Min, a.Max, yt).Select(v => new { v, label = Ticks.Format(v, Ticks.NiceStep(a.Max - a.Min, yt)) }).ToList(),
+            ticks = a.Log && a.Min > 0 ? LogTicks(a.Min, a.Max).Select(v => new { v, label = Ticks.FormatValue(v, 3) }).ToList() : Ticks.Generate(a.Min, a.Max, yt).Select(v => new { v, label = Ticks.Format(v, Ticks.NiceStep(a.Max - a.Min, yt)) }).ToList(),
         }).ToList();
         int xt = TickTarget(W / Math.Max(1, dpr), 110);
         bool timeAxis = m.XTimeMode != "none";
@@ -154,7 +201,7 @@ public sealed class FrameServer
                     if (xb != null) System.Buffers.ArrayPool<double>.Shared.Return(xb);
                     pos += 2 * got;
                     levelMin = Math.Min(levelMin, -1); levelMax = Math.Max(levelMax, -1);
-                    curves.Add(new { idx = ci, mode = "raw", off, n = got, color = c.ColorIndex, axis = c.Axis.Id, step = c.Step, label = m.LabelOf(c) });
+                    curves.Add(new { idx = ci, mode = "raw", off, n = got, color = c.ColorIndex, axis = c.Axis.Id, step = c.Step, label = m.LabelOf(c), width = c.Width, points = c.Points });
                 }
                 else
                 {
@@ -167,7 +214,7 @@ public sealed class FrameServer
                     for (int i = 0; i < W; i++) { buf[pos + i] = float.NaN; buf[pos + W + i] = float.NaN; }
                     for (int i = 0; i < cols; i++) { buf[pos + c0 + i] = _mn[i]; buf[pos + W + c0 + i] = _mx[i]; }
                     pos += 2 * W;
-                    curves.Add(new { idx = ci, mode = "env", off, n = W, color = c.ColorIndex, axis = c.Axis.Id, label = m.LabelOf(c) });
+                    curves.Add(new { idx = ci, mode = "env", off, n = W, color = c.ColorIndex, axis = c.Axis.Id, label = m.LabelOf(c), width = c.Width, points = c.Points });
                 }
             }
         }
@@ -194,10 +241,32 @@ public sealed class FrameServer
                 readouts = ro,
             };
         }
+        // ---- band cursor read-outs (0.9.3)
+        object? band = null;
+        if (m.BandEnabled)
+        {
+            List<object>? ro = m.BandLive ? null : new List<object>();
+            foreach (var c in m.Curves)
+            {
+                if (ro == null) break;
+                if (!c.Visible || IsXY(c) || InLane(m, c)) continue;
+                var st = BandStats(c, m, m.BandX0, m.BandX1);
+                ro.Add(new { idx = m.Curves.IndexOf(c), label = m.LabelOf(c), unit = c.Channel.Unit, color = c.ColorIndex, min = st?.min, max = st?.max, mean = st?.mean, rms = st?.rms, pp = st == null ? (double?)null : st.Value.max - st.Value.min, n = st?.n, approx = st?.approx ?? false });
+            }
+            double len = m.BandX1 - m.BandX0;
+            band = new
+            {
+                x0 = m.BandX0, x1 = m.BandX1, label0 = FormatX(m, m.BandX0, timeAxis ? 0.001 : 0), label1 = FormatX(m, m.BandX1, timeAxis ? 0.001 : 0),
+                lenLabel = timeAxis ? len.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture) + " s" : Ticks.FormatValue(len) + (string.IsNullOrEmpty(m.XUnit) ? "" : " " + m.XUnit),
+                readouts = ro,
+            };
+        }
         var r = new Result { Floats = pos, Ms = sw.Elapsed.TotalMilliseconds };
         r.Header = new
         {
-            chart = chart.Id, xmin = m.XMin, xmax = m.XMax, xunit, xTimeMode = m.XTimeMode, columns, axes = axesDto, xticks, curves, cursors,
+            chart = chart.Id, xmin = m.XMin, xmax = m.XMax, xunit, xTimeMode = m.XTimeMode, columns, axes = axesDto, xticks, curves, cursors, band,
+            bandRef = bandRef == null ? null : new { x0 = bandRef.Value.x0, x1 = bandRef.Value.x1 },
+            cursorMode = m.CursorMode,
             lanes = m.DigitalLanes,
             stats = new { ms = r.Ms, samples, columns, level = levelMin == int.MaxValue ? "-" : levelMin == levelMax ? levelMin.ToString() : $"{levelMin}..{levelMax}", floats = pos },
         };

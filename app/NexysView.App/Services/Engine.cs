@@ -10,6 +10,8 @@ public sealed class Chart
 {
     public int Id { get; }
     public PlotModel Model { get; } = new();
+    /// <summary>0.9.3: id of the overview chart this chart is the detail of (its x window = the overview's band).</summary>
+    public int? DetailOf { get; set; }
     public Chart(int id) { Id = id; }
 }
 
@@ -35,6 +37,10 @@ public sealed class Engine
     public bool Developer { get; set; }
     /// <summary>Feature tour finished or skipped once (layout.json); false on a first start → the page auto-starts the tour.</summary>
     public bool TourSeen { get; set; }
+    /// <summary>0.9.3: ANALYSIS / REPORT tabs are hidden unless layout.json says showLegacyTabs=true (engine and commands stay).</summary>
+    public bool ShowLegacyTabs { get; set; }
+    /// <summary>0.9.3: file/group drop rule — "unit" (one chart, y axis per unit, steps as lanes) or "each" (a chart per channel).</summary>
+    public string DropMode { get; set; } = "unit";
     public string StatusText { get; private set; } = "";
     public string Led { get; private set; } = "idle";
     public string AlignMode { get; set; } = "start";
@@ -161,6 +167,7 @@ public sealed class Engine
         if (chart == null || ch == null || ch.IsText) return null;
         var m = chart.Model;
         if (zone == "x") { SetXChannel(chartId, channelId); return null; }
+        if (chart.DetailOf != null && zone != "xy") { SetDetailChannel(chartId, channelId); return m.Curves.FirstOrDefault(); }
         var x = zone == "xy" ? Find(xId) : null;
         var c = m.AddCurve(ch, x);
         if (x == null && IsStep(ch)) c.Step = true;
@@ -204,10 +211,11 @@ public sealed class Engine
         m.XMin = x0; m.XMax = x1;
         if (commit && fromX0 != null && fromX1 != null && (fromX0 != x0 || fromX1 != x1))
         {
-            double ox0 = fromX0.Value, ox1 = fromX1.Value;
-            State.Undo.Push("View", () => { m.XMin = ox0; m.XMax = ox1; TouchChart(chartId); }, () => { m.XMin = x0; m.XMax = x1; TouchChart(chartId); });
+            double ox0 = fromX0.Value, ox1 = fromX1.Value; m.PushZoom(ox0, ox1);
+            State.Undo.Push("View", () => { m.XMin = ox0; m.XMax = ox1; TouchChart(chartId); AfterView(chartId); }, () => { m.XMin = x0; m.XMax = x1; TouchChart(chartId); AfterView(chartId); });
         }
         ChartChanged?.Invoke(chartId);
+        AfterView(chartId);
         if (commit) Changed?.Invoke();
     }
 
@@ -219,17 +227,233 @@ public sealed class Engine
         m.XMin = x0; m.XMax = x1;
         if (commit && fromX0 != null && fromX1 != null && (fromX0 != x0 || fromX1 != x1))
         {
-            double ox0 = fromX0.Value, ox1 = fromX1.Value;
-            State.Undo.Push("View", () => { m.XMin = ox0; m.XMax = ox1; TouchChart(chartId); }, () => { m.XMin = x0; m.XMax = x1; TouchChart(chartId); });
+            double ox0 = fromX0.Value, ox1 = fromX1.Value; m.PushZoom(ox0, ox1);
+            State.Undo.Push("View", () => { m.XMin = ox0; m.XMax = ox1; TouchChart(chartId); AfterView(chartId); }, () => { m.XMin = x0; m.XMax = x1; TouchChart(chartId); AfterView(chartId); });
         }
+        AfterView(chartId);
+    }
+
+    // ------------------------------------------------------------------ 0.9.3: x-axis link, overview/detail, band cursor, zoom box/back
+    /// <summary>After the x window of a chart changed: a detail chart moves its overview's band, x-linked charts follow.</summary>
+    public void AfterView(int chartId)
+    {
+        var chart = Get(chartId); if (chart == null) return; var m = chart.Model;
+        if (chart.DetailOf is int ov && Get(ov) is { } o)
+        {
+            var om = o.Model;
+            if (!om.BandEnabled || om.BandX0 != m.XMin || om.BandX1 != m.XMax) { om.BandEnabled = true; om.BandX0 = m.XMin; om.BandX1 = m.XMax; ChartChanged?.Invoke(ov); }
+        }
+        PropagateLink(chart);
+    }
+
+    /// <summary>Charts with the same key share pan/zoom: the mapped x channel, else the file + x unit of the first curve.</summary>
+    public string? LinkKey(Chart c)
+    {
+        var m = c.Model;
+        if (!m.LinkX || m.Curves.Count == 0 || m.IsXY || c.DetailOf != null || c.Id == 0) return null;
+        var xc = m.XChannelOf; if (xc != null) return "x:" + xc.Id;
+        return "f:" + m.Curves[0].Channel.FileName + "|" + m.XUnit;
+    }
+
+    void PropagateLink(Chart src)
+    {
+        var key = LinkKey(src); if (key == null) return;
+        foreach (var c in Charts)
+        {
+            if (c == src || LinkKey(c) != key) continue; var m = c.Model;
+            if (m.XMin == src.Model.XMin && m.XMax == src.Model.XMax) continue;
+            m.XMin = src.Model.XMin; m.XMax = src.Model.XMax; ChartChanged?.Invoke(c.Id);
+        }
+    }
+
+    /// <summary>Band of an overview that this chart should show as faint reference lines (same link group).</summary>
+    public (double x0, double x1)? BandRefFor(Chart c)
+    {
+        if (c.Model.BandEnabled) return null;
+        var key = LinkKey(c); if (key == null) return null;
+        foreach (var o in Charts) if (o != c && o.Model.BandEnabled && LinkKey(o) == key) return (o.Model.BandX0, o.Model.BandX1);
+        return null;
+    }
+
+    public void SetLinkX(int chartId, bool on)
+    {
+        var chart = Get(chartId); if (chart == null) return;
+        chart.Model.LinkX = on; if (on) PropagateLink(chart);
+        Changed?.Invoke();
+    }
+
+    /// <summary>Band cursor of an overview: live (record=false, no snapshot) during a drag, committed (undoable) at the end.</summary>
+    public void SetBand(int chartId, bool enabled, double x0, double x1, bool record)
+    {
+        var chart = Get(chartId); if (chart == null) return; var m = chart.Model;
+        if (x1 < x0) (x0, x1) = (x1, x0);
+        bool e0 = m.BandEnabled; double b0 = m.BandX0, b1 = m.BandX1;
+        void Apply(bool en, double a, double b) { m.BandEnabled = en; m.BandX0 = a; m.BandX1 = b; ChartChanged?.Invoke(chartId); SyncDetail(chart); foreach (var c in Charts) if (c != chart && BandRefFor(c) != null) ChartChanged?.Invoke(c.Id); }
+        m.BandLive = !record;
+        if (record) { if (e0 == enabled && b0 == x0 && b1 == x1) { ChartChanged?.Invoke(chartId); return; } State.Undo.Do("Band", () => Apply(enabled, x0, x1), () => Apply(e0, b0, b1)); Changed?.Invoke(); }
+        else Apply(enabled, x0, x1);
+    }
+
+    void SyncDetail(Chart overview)
+    {
+        var om = overview.Model; if (!om.BandEnabled) return;
+        foreach (var d in Charts.Where(c => c.DetailOf == overview.Id))
+        {
+            var m = d.Model; if (m.XMin == om.BandX0 && m.XMax == om.BandX1) continue;
+            m.XMin = om.BandX0; m.XMax = om.BandX1; ChartChanged?.Invoke(d.Id);
+        }
+    }
+
+    public void SetCursorMode(int chartId, string mode)
+    {
+        var chart = Get(chartId); if (chart == null) return; var m = chart.Model;
+        m.CursorMode = mode == "band" ? "band" : "free";
+        if (m.CursorMode == "band" && !m.BandEnabled) { double w = m.XMax - m.XMin; m.BandEnabled = true; m.BandX0 = m.XMin + w * 0.4; m.BandX1 = m.XMin + w * 0.6; SyncDetail(chart); }
+        TouchChart(chartId);
+    }
+
+    static void CopyX(Curve from, Curve to, PlotModel om, PlotModel dm)
+    {
+        to.XChannel = from.XChannel; to.XMonotonic = from.XMonotonic; to.XScale = from.XScale; to.XOffset = from.XOffset;
+        dm.XUnit = om.XUnit; dm.XTimeMode = om.XTimeMode; dm.XTimeOrigin = om.XTimeOrigin;
+    }
+
+    /// <summary>Create the detail chart of an overview: one curve (the selected channel of the overview, else its first), x window = band.</summary>
+    public Chart? LinkDetail(int chartId, string? channelId = null)
+    {
+        var ov = Get(chartId); if (ov == null || ov.Id == 0 || ov.Model.Curves.Count == 0) return null; var m = ov.Model;
+        var src = m.Curves.FirstOrDefault(c => c.Channel.Id == (channelId ?? Selected)) ?? m.Curves[0];
+        if (m.CursorMode != "band" || !m.BandEnabled) { m.CursorMode = "band"; if (!m.BandEnabled) { double w = m.XMax - m.XMin; m.BandEnabled = true; m.BandX0 = m.XMin + w * 0.4; m.BandX1 = m.XMin + w * 0.6; } }
+        var existing = Charts.FirstOrDefault(c => c.DetailOf == ov.Id);
+        if (existing != null) { SetDetailChannel(existing.Id, src.Channel.Id); return existing; }
+        var d = AddChart(record: true, at: Charts.IndexOf(ov) + 1); d.DetailOf = ov.Id;
+        var dm = d.Model; dm.Title = "Detail · " + src.Channel.Name; dm.LinkX = false;
+        var cv = dm.AddCurve(src.Channel, null); CopyX(src, cv, m, dm); cv.Step = src.Step; cv.ColorIndex = src.ColorIndex; cv.Width = src.Width;
+        dm.XMin = m.BandX0; dm.XMax = m.BandX1;
+        _ = State.EnsurePyramid(src.Channel).ContinueWith(_ => ChartChanged?.Invoke(d.Id));
+        ActiveChart = ov.Id; TouchChart(ov.Id); TouchChart(d.Id);
+        SetStatus($"Detail chart linked to '{(string.IsNullOrEmpty(m.Title) ? "Chart " + (Charts.IndexOf(ov) + 1) : m.Title)}' — drag the band or drop another channel on the detail chart");
+        return d;
+    }
+
+    /// <summary>Replace the single curve of a detail chart (legend click on the overview, properties, or a drop on the detail chart).</summary>
+    public void SetDetailChannel(int detailId, string channelId)
+    {
+        var d = Get(detailId); var ch = Find(channelId); if (d == null || ch == null || ch.IsText) return; var dm = d.Model;
+        var ov = d.DetailOf is int o ? Get(o) : null; var src = ov?.Model.Curves.FirstOrDefault(c => c.Channel == ch);
+        var old = dm.Curves.ToList(); var oldAxes = dm.YAxes.ToList(); double x0 = dm.XMin, x1 = dm.XMax; string t0 = dm.Title;
+        void Apply()
+        {
+            dm.Curves.Clear(); dm.YAxes.Clear();
+            var cv = dm.AddCurve(ch, null);
+            if (src != null && ov != null) { CopyX(src, cv, ov.Model, dm); cv.Step = src.Step; cv.ColorIndex = src.ColorIndex; cv.Width = src.Width; } else cv.Step = IsStep(ch);
+            dm.Title = "Detail · " + ch.Name; dm.XMin = x0; dm.XMax = x1;
+            _ = State.EnsurePyramid(ch).ContinueWith(_ => ChartChanged?.Invoke(detailId));
+            TouchChart(detailId);
+        }
+        State.Undo.Do("Detail " + ch.Name, Apply, () => { dm.Curves.Clear(); dm.YAxes.Clear(); dm.Curves.AddRange(old); dm.YAxes.AddRange(oldAxes); dm.Title = t0; dm.XMin = x0; dm.XMax = x1; TouchChart(detailId); });
+    }
+
+    /// <summary>Right-drag zoom: x window and/or y ranges (fractions from the top of the plot, 0..1); undoable, on the zoom history.</summary>
+    public void ZoomBox(int chartId, double? x0, double? x1, double? fy0, double? fy1)
+    {
+        var chart = Get(chartId); if (chart == null) return; var m = chart.Model;
+        m.PushZoom(m.XMin, m.XMax);
+        double ox0 = m.XMin, ox1 = m.XMax; var ax0 = m.YAxes.Select(a => (a, a.Auto, a.Min, a.Max)).ToList();
+        void Apply()
+        {
+            if (x0 != null && x1 != null && x1.Value - x0.Value > 1e-12) { m.XMin = x0.Value; m.XMax = x1.Value; }
+            if (fy0 != null && fy1 != null && fy1.Value - fy0.Value > 1e-6)
+                foreach (var a in m.YAxes)
+                {
+                    double top = Math.Clamp(fy0.Value, 0, 1), bot = Math.Clamp(fy1.Value, 0, 1), mn, mx;
+                    if (a.Log && a.Min > 0 && a.Max > 0) { double lmin = Math.Log10(a.Min), lmax = Math.Log10(a.Max); mn = Math.Pow(10, lmax - (lmax - lmin) * bot); mx = Math.Pow(10, lmax - (lmax - lmin) * top); }
+                    else { mn = a.Max - (a.Max - a.Min) * bot; mx = a.Max - (a.Max - a.Min) * top; }
+                    if (mx - mn > 0) { a.Auto = false; a.Min = mn; a.Max = mx; }
+                }
+            TouchChart(chartId); AfterView(chartId);
+        }
+        State.Undo.Do("Zoom", Apply, () => { m.XMin = ox0; m.XMax = ox1; foreach (var (a, au, mn, mx) in ax0) { a.Auto = au; a.Min = mn; a.Max = mx; } TouchChart(chartId); AfterView(chartId); });
+    }
+
+    public bool ZoomBack(int chartId)
+    {
+        var chart = Get(chartId); if (chart == null) return false;
+        if (!chart.Model.ZoomBack()) { SetStatus("No earlier zoom to go back to"); return false; }
+        TouchChart(chartId); AfterView(chartId); return true;
+    }
+
+    public void SetAxis(int chartId, string axisId, bool? auto, double? min, double? max, bool? log, bool? right)
+    {
+        var chart = Get(chartId); if (chart == null) return; var m = chart.Model; var a = m.YAxes.FirstOrDefault(x => x.Id == axisId); if (a == null) return;
+        var s0 = (a.Auto, a.Min, a.Max, a.Log, a.Right);
+        bool au = auto ?? (min != null || max != null ? false : s0.Auto); double mn = min ?? s0.Min, mx = max ?? s0.Max;
+        if (mx <= mn) { mx = mn + 1; }
+        void Apply(bool a1, double a2, double a3, bool a4, bool a5) { a.Auto = a1; a.Min = a2; a.Max = a3; a.Log = a4; a.Right = a5; TouchChart(chartId); }
+        State.Undo.Do("Axis", () => Apply(au, mn, mx, log ?? s0.Log, right ?? s0.Right), () => Apply(s0.Auto, s0.Min, s0.Max, s0.Log, s0.Right));
+    }
+
+    /// <summary>Drop of a file / group / name node: one chart with a y axis per unit (steps as lanes) or a chart per channel;
+    /// the file's time channel becomes the x axis when every curve has its length. Large drops are not confirmed, only reported.</summary>
+    public int DropGroup(IEnumerable<string> ids, string? mode = null)
+    {
+        mode ??= DropMode;
+        var chans = ids.Select(Find).Where(c => c != null && !c!.IsText).Select(c => c!).Distinct().Take(256).ToList();
+        if (chans.Count == 0) return 0;
+        var file = State.FileOf(chans[0]);
+        var timeCh = file != null ? XIndex.SuggestX(file.AllChannels, chans[0].Length) : null;
+        if (timeCh != null && chans.Count > 1) chans.Remove(timeCh);
+        var charts = new List<Chart>();
+        if (mode == "each") foreach (var ch in chans) { var c = AddChart(record: charts.Count == 0); AddCurve(c.Id, ch.Id, record: false); charts.Add(c); }
+        else
+        {
+            var c = AddChart(); foreach (var ch in chans) AddCurve(c.Id, ch.Id, record: false);
+            if (c.Model.Curves.Any(cv => cv.Step) && c.Model.Curves.Any(cv => !cv.Step)) c.Model.DigitalLanes = true;
+            charts.Add(c);
+        }
+        if (timeCh != null) foreach (var c in charts) if (c.Model.Curves.All(cv => cv.Channel.Length == timeCh.Length)) { c.Model.SetXChannel(timeCh); _ = State.EnsurePyramid(timeCh); }
+        Mode = "VIEW"; ActiveChart = charts[0].Id;
+        SetStatus($"{chans.Count} channel(s) → {charts.Count} chart(s)" + (timeCh != null ? $" · x = {timeCh.Name}" : "") + (chans.Count > 50 ? $" · large drop ({chans.Count} channels)" : ""));
+        Changed?.Invoke(); ChartChanged?.Invoke(-1);
+        return charts.Count;
+    }
+
+    /// <summary>Row of a value table at the active chart's cursor A (or band start): sample index of the table's first channel.</summary>
+    public long? CursorRowOf(Table t)
+    {
+        if (t.Channels.Count == 0) return null; var chart = Get(ActiveChart); if (chart == null) return null; var m = chart.Model;
+        double? x = m.CursorA.Enabled ? m.CursorA.X : m.BandEnabled ? m.BandX0 : null; if (x == null) return null;
+        var ch = t.Channels[0]; var cv = m.Curves.FirstOrDefault(c => c.Channel == ch);
+        double i = cv != null && cv.XMonotonic && cv.XChannel != null ? XIndex.IndexOf(cv.XChannel, (x.Value - cv.XOffset) / cv.XScale) : ch.IndexOf(x.Value - (cv?.XOffset ?? 0));
+        if (!double.IsFinite(i)) return null;
+        return Math.Clamp((long)Math.Round(i), 0, Math.Max(0, ch.Length - 1));
+    }
+
+    /// <summary>CSV / TDMS of the given channels over an x range of a chart (null = whole channels).</summary>
+    public int ExportRange(string path, bool tdms, IEnumerable<string> ids, int chartId, double? x0, double? x1)
+    {
+        var chans = ids.Select(Find).Where(c => c != null && !c!.IsText).Select(c => c!).ToList();
+        if (chans.Count == 0) throw new InvalidOperationException("no channels to export");
+        var chart = Get(chartId); var cv0 = chart?.Model.Curves.FirstOrDefault(c => c.Channel == chans[0]);
+        long first = 0, last = chans.Max(c => c.Length) - 1;
+        if (x0 != null && x1 != null)
+        {
+            double Idx(double x) => cv0 != null && cv0.XMonotonic && cv0.XChannel != null ? XIndex.IndexOf(cv0.XChannel, (x - cv0.XOffset) / cv0.XScale) : chans[0].IndexOf(x - (cv0?.XOffset ?? 0));
+            double ia = Idx(Math.Min(x0.Value, x1.Value)), ib = Idx(Math.Max(x0.Value, x1.Value));
+            first = Math.Max(0, (long)Math.Ceiling(ia)); last = Math.Min(last, (long)Math.Floor(ib));
+        }
+        if (last < first) throw new InvalidOperationException("the range holds no sample");
+        int n = tdms ? Export.TdmsExport.SaveRange(path, chans, first, last) : Export.CsvExport.Write(path, chans, first, last, cv0);
+        SetStatus($"Exported {n} channel(s), samples {first:N0}–{last:N0} → {path}");
+        return n;
     }
 
     public void ZoomFull(int chartId)
     {
         var chart = Get(chartId); if (chart == null) return; var m = chart.Model;
         double ox0 = m.XMin, ox1 = m.XMax;
-        var (a, b) = m.FullX();
-        State.Undo.Do("Zoom full", () => { m.XMin = a; m.XMax = b; foreach (var ax in m.YAxes) ax.Auto = true; TouchChart(chartId); }, () => { m.XMin = ox0; m.XMax = ox1; TouchChart(chartId); });
+        var (a, b) = m.FullX(); m.PushZoom(ox0, ox1);
+        State.Undo.Do("Zoom full", () => { m.XMin = a; m.XMax = b; foreach (var ax in m.YAxes) ax.Auto = true; TouchChart(chartId); AfterView(chartId); }, () => { m.XMin = ox0; m.XMax = ox1; TouchChart(chartId); AfterView(chartId); });
     }
 
     public void SetCursor(int chartId, string which, double? x)
@@ -248,20 +472,23 @@ public sealed class Engine
         State.Undo.Do("Clear cursors", () => { m.CursorA.Enabled = m.CursorB.Enabled = false; TouchChart(chartId); }, () => { m.CursorA.Enabled = a; m.CursorB.Enabled = b; TouchChart(chartId); });
     }
 
-    public void SetCurve(int chartId, int idx, bool? visible = null, bool? step = null, int? color = null, bool? right = null)
+    public void SetCurve(int chartId, int idx, bool? visible = null, bool? step = null, int? color = null, bool? right = null, double? width = null, bool? points = null, string? axis = null)
     {
         var chart = Get(chartId); if (chart == null) return; var m = chart.Model;
         if (idx < 0 || idx >= m.Curves.Count) return;
         var c = m.Curves[idx];
-        bool v0 = c.Visible, s0 = c.Step, r0 = c.Axis.Right; int c0 = c.ColorIndex; var ax0 = c.Axis;
-        void Apply(bool v, bool s, int col, bool r, YAxis? ax)
+        bool v0 = c.Visible, s0 = c.Step, r0 = c.Axis.Right, p0 = c.Points; int c0 = c.ColorIndex; var ax0 = c.Axis; float w0 = c.Width;
+        void Apply(bool v, bool s, int col, bool r, YAxis? ax, float wd, bool pt, string? axMode)
         {
-            c.Visible = v; c.Step = s; c.ColorIndex = col;
-            if (ax != null) c.Axis = ax; else if (r != c.Axis.Right) c.Axis = m.YAxes.FirstOrDefault(a => a.Right == r) ?? NewAxis(m, c.Channel.Unit, r);
+            c.Visible = v; c.Step = s; c.ColorIndex = col; c.Width = wd; c.Points = pt;
+            if (ax != null) c.Axis = ax;
+            else if (axMode == "own") { var na = new YAxis($"y{m.YAxes.Count}_{idx}") { Unit = c.Channel.Unit, Right = r }; m.YAxes.Add(na); c.Axis = na; }
+            else if (axMode == "shared") c.Axis = m.YAxes.FirstOrDefault(a => a.Unit == c.Channel.Unit && a.Right == r && m.Curves.Any(cc => cc != c && cc.Axis == a)) ?? c.Axis;
+            else if (r != c.Axis.Right) c.Axis = m.YAxes.FirstOrDefault(a => a.Right == r) ?? NewAxis(m, c.Channel.Unit, r);
             m.YAxes.RemoveAll(a => !m.Curves.Any(cc => cc.Axis == a));
             TouchChart(chartId);
         }
-        State.Undo.Do("Curve", () => Apply(visible ?? v0, step ?? s0, color ?? c0, right ?? r0, null), () => Apply(v0, s0, c0, r0, m.YAxes.Contains(ax0) ? ax0 : null));
+        State.Undo.Do("Curve", () => Apply(visible ?? v0, step ?? s0, color ?? c0, right ?? r0, null, (float)(width ?? w0), points ?? p0, axis), () => Apply(v0, s0, c0, r0, m.YAxes.Contains(ax0) ? ax0 : null, w0, p0, null));
     }
 
     public void SetChart(int chartId, string? title = null, bool? grid = null, bool? legend = null, bool? lanes = null, string? timeMode = null)
@@ -380,13 +607,14 @@ public sealed class Engine
     public object? TableRows(int id, long first, int count)
     {
         var t = Tables.FirstOrDefault(x => x.Id == id); if (t == null) return null;
-        count = Math.Clamp(count, 1, 1000); long maxLen = t.Channels.Count == 0 ? 0 : t.Channels.Max(c => c.Length);
+        count = Math.Clamp(count, 1, 200_000); long maxLen = t.Channels.Count == 0 ? 0 : t.Channels.Max(c => c.Length);
         first = Math.Clamp(first, 0, Math.Max(0, maxLen - 1));
-        var cols = new List<object>();
+        var cols = new List<object>(); var chart = Get(ActiveChart);
         foreach (var c in t.Channels)
         {
             var buf = new double[count]; int got = c.Length > first ? c.Source.Read(first, buf.AsSpan(0, (int)Math.Min(count, c.Length - first))) : 0;
-            cols.Add(new { id = c.Id, name = c.Name, unit = c.Unit, values = buf.Take(got).Select(v => double.IsNaN(v) ? (double?)null : v).ToList(), x = Enumerable.Range(0, got).Select(i => c.XAt(first + i)).ToList() });
+            var cv = chart?.Model.Curves.FirstOrDefault(x => x.Channel == c);
+            cols.Add(new { id = c.Id, name = c.Name, unit = c.Unit, values = buf.Take(got).Select(v => double.IsNaN(v) ? (double?)null : v).ToList(), x = Enumerable.Range(0, got).Select(i => cv != null ? cv.XAt(first + i) : c.XAt(first + i)).ToList() });
         }
         return new { first, count, total = maxLen, columns = cols };
     }
@@ -404,7 +632,7 @@ public sealed class Engine
         foreach (var id in sparkIds) { var ch = Find(id); if (ch?.Pyramid != null) sparks[id] = Sparkline(ch); }
         return new
         {
-            theme = Theme, plot = Plot, mode = Mode, developer = Developer,
+            theme = Theme, plot = Plot, mode = Mode, developer = Developer, legacyTabs = ShowLegacyTabs, dropMode = DropMode,
             app = new { version = AppInfo.Version, versionText = AppInfo.VersionText, beta = AppInfo.IsBeta, repo = AppInfo.Repo, issues = AppInfo.Issues, tourSeen = TourSeen, automation = SelfTest.Enabled },
             status = new { text = StatusText, led = Led },
             undo = new { can = State.Undo.CanUndo, name = State.Undo.UndoName, canRedo = State.Undo.CanRedo },
@@ -417,7 +645,7 @@ public sealed class Engine
             analysis = Analysis.Dto(),
             report = Report.Dto(),
             preview = Preview.Model.Curves.Count > 0 ? ChartDto(Preview) : null,
-            tables = Tables.Select(t => new { id = t.Id, channels = t.Channels.Select(c => new { id = c.Id, name = c.Name, unit = c.Unit, length = c.Length }).ToList(), rows = t.Channels.Count == 0 ? 0 : t.Channels.Max(c => c.Length) }).ToList(),
+            tables = Tables.Select(t => new { id = t.Id, channels = t.Channels.Select(c => new { id = c.Id, name = c.Name, unit = c.Unit, length = c.Length }).ToList(), rows = t.Channels.Count == 0 ? 0 : t.Channels.Max(c => c.Length), cursorRow = CursorRowOf(t) }).ToList(),
             cache = new { ready = State.Files.SelectMany(f => f.AllChannels).Count(c => c.Pyramid != null), total = State.Files.Sum(f => f.ChannelCount), mb = State.Files.SelectMany(f => f.AllChannels).Sum(c => c.Pyramid?.MemoryBytes ?? 0) / 1048576.0 },
         };
     }
@@ -458,6 +686,9 @@ public sealed class Engine
             lanes = m.DigitalLanes, laneCount = m.DigitalLanes ? m.Curves.Count(c => c.Visible && c.Step && !(c.XChannel != null && !c.XMonotonic)) : 0,
             curveCount = m.Curves.Count(c => !(m.DigitalLanes && c.Step && !(c.XChannel != null && !c.XMonotonic))),
             alignMode = m.AlignMode, alignOffsetMs = m.AlignOffsetMs, grid = m.ShowGrid, legend = m.ShowLegend, isXY = m.IsXY,
+            cursorMode = m.CursorMode, band = new { on = m.BandEnabled, x0 = m.BandX0, x1 = m.BandX1, label0 = m.BandEnabled ? fr.FormatX(m, m.BandX0, m.XTimeMode != "none" ? 0.001 : 0) : "", label1 = m.BandEnabled ? fr.FormatX(m, m.BandX1, m.XTimeMode != "none" ? 0.001 : 0) : "" },
+            linkX = m.LinkX, linkKey = LinkKey(chart), detailOf = chart.DetailOf is int dov && Get(dov) != null ? dov : (int?)null, hasDetail = Charts.Any(c => c.DetailOf == chart.Id), zoomHistory = m.ZoomHistory.Count,
+            axes = m.YAxes.Select(a => new { id = a.Id, unit = a.Unit, right = a.Right, auto = a.Auto, min = a.Min, max = a.Max, log = a.Log, curves = m.Curves.Count(c => c.Axis == a) }).ToList(),
             cursorA = new { on = m.CursorA.Enabled, x = m.CursorA.X, label = m.CursorA.Enabled ? fr.FormatX(m, m.CursorA.X) : "" },
             cursorB = new { on = m.CursorB.Enabled, x = m.CursorB.X, label = m.CursorB.Enabled ? fr.FormatX(m, m.CursorB.X) : "" },
             xChannel = xc == null ? null : new { id = xc.Id, name = xc.Name, unit = xc.Unit },
@@ -467,7 +698,7 @@ public sealed class Engine
                 idx = i, channelId = c.Channel.Id, label = m.LabelOf(c), name = c.Channel.Name, unit = c.Channel.Unit, color = c.ColorIndex, hex = Hex(c.ColorIndex),
                 visible = c.Visible, step = c.Step, lane = m.DigitalLanes && c.Step && !(c.XChannel != null && !c.XMonotonic), right = c.Axis.Right, axisUnit = c.Axis.Unit,
                 xChannel = c.XChannel?.Name, xMono = c.XMonotonic, xOffset = c.XOffset, length = c.Channel.Length, file = c.Channel.FileName, ready = c.Channel.Pyramid != null,
-                dataType = c.Channel.DataType,
+                dataType = c.Channel.DataType, width = c.Width, points = c.Points, axisId = c.Axis.Id,
             }).ToList(),
         };
     }

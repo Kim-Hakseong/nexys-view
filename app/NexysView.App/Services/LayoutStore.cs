@@ -9,9 +9,13 @@ namespace NexysView.App.Services;
 /// lanes, cursors), navigator tree mode per file. Automation runs never write it.</summary>
 public static class LayoutStore
 {
-    public sealed class CurveDto { public string Channel { get; set; } = ""; public string? X { get; set; } public bool XMono { get; set; } public double XScale { get; set; } = 1; public double XOffset { get; set; } public bool Step { get; set; } public int Color { get; set; } public bool Visible { get; set; } = true; public bool RightAxis { get; set; } }
+    public sealed class CurveDto { public string Channel { get; set; } = ""; public string? X { get; set; } public bool XMono { get; set; } public double XScale { get; set; } = 1; public double XOffset { get; set; } public bool Step { get; set; } public double Width { get; set; } = 1; public bool Points { get; set; } public string AxisId { get; set; } = ""; public int Color { get; set; } public bool Visible { get; set; } = true; public bool RightAxis { get; set; } }
+    public sealed class AxisDto { public string Id { get; set; } = ""; public string Unit { get; set; } = ""; public bool Right { get; set; } public bool Auto { get; set; } = true; public double Min { get; set; } public double Max { get; set; } public bool Log { get; set; } }
     public sealed class PlotDto
     {
+        // 0.9.3
+        public string CursorMode { get; set; } = "free"; public bool Band { get; set; } public double BandX0 { get; set; } public double BandX1 { get; set; } public bool LinkX { get; set; } = true; public int DetailOfIndex { get; set; } = -1;
+        public List<AxisDto> Axes { get; set; } = new();
         public string Title { get; set; } = ""; public double XMin { get; set; } public double XMax { get; set; } public bool Grid { get; set; } = true; public bool Legend { get; set; } = true;
         public List<CurveDto> Curves { get; set; } = new(); public bool CursorA { get; set; } public double CursorAX { get; set; } public bool CursorB { get; set; } public double CursorBX { get; set; }
         public string XTimeMode { get; set; } = "none"; public double XTimeOrigin { get; set; } public bool Lanes { get; set; } public string AlignMode { get; set; } = "none"; public double AlignOffsetMs { get; set; }
@@ -30,6 +34,9 @@ public static class LayoutStore
         public List<PlotDto> Plots { get; set; } = new();
         public bool Developer { get; set; }
         public bool TourSeen { get; set; }
+        /// <summary>0.9.3: show the ANALYSIS / REPORT tabs again (hidden by default).</summary>
+        public bool ShowLegacyTabs { get; set; }
+        public string DropMode { get; set; } = "unit";
         public Dictionary<string, bool> TreeHierarchy { get; set; } = new();
         public string Mode { get; set; } = "VIEW";
     }
@@ -47,7 +54,7 @@ public static class LayoutStore
             var d = new Dto
             {
                 Version = AppInfo.Version, Theme = e.Theme, Plot = e.Plot, W = w.Width, H = w.Height, X = w.Left, Y = w.Top, Maximized = w.WindowState == WindowState.Maximized,
-                Files = e.State.Files.Where(f => File.Exists(f.Path)).Select(f => f.Path).ToList(), Developer = e.Developer, TourSeen = e.TourSeen, Mode = e.Mode,
+                Files = e.State.Files.Where(f => File.Exists(f.Path)).Select(f => f.Path).ToList(), Developer = e.Developer, TourSeen = e.TourSeen, ShowLegacyTabs = e.ShowLegacyTabs, DropMode = e.DropMode, Mode = e.Mode,
                 TreeHierarchy = new Dictionary<string, bool>(e.Hier),
             };
             foreach (var p in e.Charts)
@@ -57,8 +64,10 @@ public static class LayoutStore
                 {
                     Title = m.Title, XMin = m.XMin, XMax = m.XMax, Grid = m.ShowGrid, Legend = m.ShowLegend, CursorA = m.CursorA.Enabled, CursorAX = m.CursorA.X, CursorB = m.CursorB.Enabled, CursorBX = m.CursorB.X,
                     XTimeMode = m.XTimeMode, XTimeOrigin = m.XTimeOrigin, Lanes = m.DigitalLanes, AlignMode = m.AlignMode, AlignOffsetMs = m.AlignOffsetMs,
+                    CursorMode = m.CursorMode, Band = m.BandEnabled, BandX0 = m.BandX0, BandX1 = m.BandX1, LinkX = m.LinkX, DetailOfIndex = p.DetailOf is int dov ? e.Charts.FindIndex(c => c.Id == dov) : -1,
+                    Axes = m.YAxes.Select(a => new AxisDto { Id = a.Id, Unit = a.Unit, Right = a.Right, Auto = a.Auto, Min = a.Min, Max = a.Max, Log = a.Log }).ToList(),
                 };
-                foreach (var c in m.Curves) pd.Curves.Add(new CurveDto { Channel = c.Channel.Id, X = c.XChannel?.Id, XMono = c.XMonotonic, XScale = c.XScale, XOffset = c.XOffset, Step = c.Step, Color = c.ColorIndex, Visible = c.Visible, RightAxis = c.Axis.Right });
+                foreach (var c in m.Curves) pd.Curves.Add(new CurveDto { Channel = c.Channel.Id, X = c.XChannel?.Id, XMono = c.XMonotonic, XScale = c.XScale, XOffset = c.XOffset, Step = c.Step, Width = c.Width, Points = c.Points, AxisId = c.Axis.Id, Color = c.ColorIndex, Visible = c.Visible, RightAxis = c.Axis.Right });
                 d.Plots.Add(pd);
             }
             var path = PathFor();
@@ -106,7 +115,9 @@ public static class LayoutStore
                 if (pd.XMax > pd.XMin) { m.XMin = pd.XMin; m.XMax = pd.XMax; }
                 m.CursorA.Enabled = pd.CursorA; m.CursorA.X = pd.CursorAX; m.CursorB.Enabled = pd.CursorB; m.CursorB.X = pd.CursorBX;
             }
-            e.Developer = d.Developer; e.TourSeen = d.TourSeen; e.Mode = d.Mode is "NAVIGATOR" or "VIEW" or "ANALYSIS" or "REPORT" ? d.Mode : "VIEW";
+            e.Developer = d.Developer; e.TourSeen = d.TourSeen; e.ShowLegacyTabs = d.ShowLegacyTabs; e.DropMode = d.DropMode == "each" ? "each" : "unit";
+            if (!e.ShowLegacyTabs && d.Mode is "ANALYSIS" or "REPORT") d.Mode = "VIEW";
+            e.Mode = d.Mode is "NAVIGATOR" or "VIEW" or "ANALYSIS" or "REPORT" ? d.Mode : "VIEW";
             e.State.Undo.Clear();
         }
         catch { }

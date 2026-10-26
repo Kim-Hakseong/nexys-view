@@ -28,7 +28,7 @@ function renderHeader() {
   const tool = (a: string, icon: string, label: string, title: string, disabled = false) => `<button type="button" class="tool" data-a="${a}" aria-label="${label}" title="${title}"${disabled ? ' disabled' : ''}>${icon}<span>${label}</span></button>`;
   const app = (S as any).app ?? { versionText: '', beta: false };
   hdr.innerHTML = `<div class="hdr-brand"><div class="hdr-logo" data-a="about" title="About Nexys VIEW (F1)"><img src="brand/Logo.png" alt="Nexys VIEW"></div><div class="hdr-name"><small>${esc((app.versionText || '').toUpperCase())}${S.developer ? ' · DEVELOPER' : ''}</small></div></div>
-    <nav aria-label="Mode" class="hdr-nav"><div class="modes">${mode('NAVIGATOR')}${mode('VIEW')}${mode('ANALYSIS')}${mode('REPORT')}</div></nav>
+    <nav aria-label="Mode" class="hdr-nav"><div class="modes">${mode('NAVIGATOR')}${mode('VIEW')}${S.legacyTabs ? mode('ANALYSIS') + mode('REPORT') : ''}</div></nav>
     <div class="hdr-tools">${tool('open', I.folder(), 'OPEN', 'Open file (Ctrl+O)')}${tool('save', I.save(), 'SAVE', 'Save all channels as TDMS (Ctrl+S)')}<div class="vsep"></div>${tool('undo', I.undo(), 'UNDO', S.undo.can ? `Undo ${S.undo.name} (Ctrl+Z)` : 'Undo (Ctrl+Z)', !S.undo.can)}${tool('redo', I.redo(), 'REDO', 'Redo (Ctrl+Y)', !S.undo.canRedo)}<div class="vsep"></div>${tool('theme', S.theme === 'dark' ? I.sun() : I.theme(), 'THEME', 'Toggle light / dark chrome (Ctrl+T)')}${tool('plot', I.plot(), 'PLOT · ' + S.plot.toUpperCase(), 'Toggle dark / light plot (Ctrl+P)')}<div class="vsep"></div>${tool('dev', I.info(), 'DEV', 'Developer mode (Ctrl+D)')}</div>
     <div class="vsep"></div><button type="button" class="tool icon" data-a="help" aria-label="HELP" title="사용 가이드 · 기능 투어 (F1)">${I.help()}</button>
     <div class="led-pill"><span class="led ${S.status.led}"></span><span class="led-text">${S.status.led.toUpperCase()}</span></div>`;
@@ -77,7 +77,7 @@ function applyState(next: State) {
 bridge.on('state', m => { const st = m.state as State; if (!st.files && S) st.files = S.files; else if (!st.files) st.files = []; applyState(st); });
 bridge.on('undo', m => { if (!S) return; S.undo = { can: m.can, name: m.name, canRedo: m.canRedo }; renderHeader(); });
 bridge.on('status', m => { if (!S) return; S.status = { text: m.text, led: m.led }; renderFooter(); const led = hdr.querySelector('.led'); if (led) { led.className = 'led ' + m.led; (hdr.querySelector('.led-text') as HTMLElement).textContent = m.led.toUpperCase(); } });
-bridge.on('invalidate', m => { const ids: number[] = m.charts; const all = ids.includes(-1); for (const [id, pv] of view.plots) if (all || ids.includes(id)) pv.request(); if (S?.mode === 'ANALYSIS' && (all || ids.includes(0))) (analysis as any).preview?.request(); });
+bridge.on('invalidate', m => { const ids: number[] = m.charts; const all = ids.includes(-1); for (const [id, pv] of view.plots) if (all || ids.includes(id)) pv.request({ adopt: true }); if (S?.mode === 'ANALYSIS' && (all || ids.includes(0))) (analysis as any).preview?.request(); });
 bridge.on('buffer', () => { /* buffers arrive before the first frame; nothing to do */ });
 
 // ---------- About (F1 / logo): version, beta notice, feedback link
@@ -102,15 +102,27 @@ window.addEventListener('keydown', e => { if (e.key === 'F1') { e.preventDefault
 // ---------- keyboard
 document.addEventListener('keydown', e => {
   const inInput = (e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA' || (e.target as HTMLElement).tagName === 'SELECT';
-  if (!(e.ctrlKey || e.metaKey)) { if (e.key === 'F5') e.preventDefault(); return; }
+  if (!(e.ctrlKey || e.metaKey)) {
+    if (e.key === 'F5') e.preventDefault();
+    if (inInput || !S || S.mode !== 'VIEW') return;
+    const pv = view.plots.get(S.activeChart) ?? view.plots.values().next().value;
+    if (!pv) return;
+    if (e.key === 'Backspace') { e.preventDefault(); bridge.call('zoomBack', { chart: pv.dto.id }); }
+    else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && pv.dto.cursorMode === 'band' && pv.bandLocal) { e.preventDefault(); pv.nudgeBand((e.key === 'ArrowLeft' ? -1 : 1) * (e.shiftKey ? 10 : 1)); }
+    return;
+  }
   if (inInput && !['o', 'O', 's', 'S', '1', '2', '3', '4'].includes(e.key)) return;
   const k = e.key.toLowerCase();
   if (k === 'z') { e.preventDefault(); bridge.call('undo'); } else if (k === 'y') { e.preventDefault(); bridge.call('redo'); }
   else if (k === 'o') { e.preventDefault(); bridge.call(e.shiftKey ? 'openPluginDialog' : 'openDialog'); } else if (k === 's') { e.preventDefault(); bridge.call('saveDialog'); }
   else if (k === 't') { e.preventDefault(); bridge.call('setTheme', { theme: S?.theme === 'dark' ? 'light' : 'dark' }); } else if (k === 'p') { e.preventDefault(); bridge.call('setPlot', { plot: S?.plot === 'dark' ? 'light' : 'dark' }); }
   else if (k === 'd') { e.preventDefault(); bridge.call('setDeveloper', { on: !S?.developer }); }
-  else if (k === '1') setMode('NAVIGATOR'); else if (k === '2') setMode('VIEW'); else if (k === '3') setMode('ANALYSIS'); else if (k === '4') setMode('REPORT');
+  else if (k === '1') setMode('NAVIGATOR'); else if (k === '2') setMode('VIEW'); else if (k === '3' && S?.legacyTabs) setMode('ANALYSIS'); else if (k === '4' && S?.legacyTabs) setMode('REPORT');
+  else if (k === 'b') { e.preventDefault(); const pv = S ? view.plots.get(S.activeChart) ?? view.plots.values().next().value : undefined; if (pv) bridge.call('setCursorMode', { chart: pv.dto.id, mode: pv.dto.cursorMode === 'band' ? 'free' : 'band' }); }
 });
+
+// ---------- chart PNG from the properties panel (canvas → host clipboard / file)
+document.addEventListener('nx-chart-png', (e: any) => { const pv = view.plots.get(e.detail.chart); if (!pv) return; bridge.call(e.detail.save ? 'png.save' : 'png.copy', { dataUrl: pv.pngDataUrl(), name: (pv.dto.title || 'chart') + '.png' }); });
 
 // ---------- files dropped from the shell
 document.addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('Files')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
@@ -199,6 +211,24 @@ const test = {
   async clickSel(sel: string) { const el = document.querySelector(sel) as HTMLElement | null; if (!el) throw new Error('no element ' + sel); el.click(); await new Promise(r => setTimeout(r, 60)); await settle(); return true; },
   async search(q: string) { nav.setSearch(q); await new Promise(r => setTimeout(r, 30)); return nav.matches.map(c => c.id); },
   async selectChannel(id: string) { const row = nav.rowElement(id); if (!row) throw new Error('row not visible ' + id); row.click(); await new Promise(r => setTimeout(r, 60)); await settle(); return true; },
+  // ---- 0.9.3 (real DOM events)
+  /** Drop a file / group node's channels onto the drop zone (DRAG_GROUP flag → engine drop rule). */
+  async dropGroup(chans: { id: string; name: string }[]) { const dt = dragData(chans); dt.setData('application/x-nexys-group', 'group'); const z = view.el.querySelector('.dropzone')!; fire(z, 'dragover', dt); fire(z, 'drop', dt); await new Promise(r => setTimeout(r, 80)); await settle(); return true; },
+  /** Drag a NAVIGATOR row (file/group/node) by its channel id or key: uses the navigator's own dragstart handler. */
+  async dragRowToView(sel: string) { const row = nav.el.querySelector(sel) as HTMLElement | null; if (!row) throw new Error('no row ' + sel); const dt = new DataTransfer(); row.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt })); const z = view.el.querySelector('.dropzone')!; fire(z, 'dragover', dt); fire(z, 'drop', dt); await new Promise(r => setTimeout(r, 80)); await settle(); return Array.from(dt.types); },
+  async rightZoom(chart: number, fx0: number, fy0: number, fx1: number, fy1: number, mods: any = {}) { const pv = view.plots.get(chart)!; await pv.rightDrag(fx0, fy0, fx1, fy1, mods); await settle(); return pv.view; },
+  async leftDrag(chart: number, fx0: number, fx1: number) { const pv = view.plots.get(chart)!; await pv.leftDrag(fx0, fx1); await settle(); return { view: pv.view, band: pv.bandLocal }; },
+  /** Band drag inside the band by px steps; returns per-step frame times of `measure` chart (the detail chart) or of the chart itself. */
+  async bandDrag(chart: number, px: number, n: number, measure?: number) {
+    const pv = view.plots.get(chart)!; const mv = view.plots.get(measure ?? chart)!; const out: number[] = [];
+    for (let i = 0; i < n; i++) { const before = mv.frames; pv.nudgeBand(px); await waitFrames(mv, before); out.push(mv.lastTotalMs); }
+    await settle(); return out;
+  },
+  async bandDragLive(chart: number, px: number, n: number, measure?: number) { const pv = view.plots.get(chart)!; const out = await pv.bandDragLive(px, n, view.plots.get(measure ?? chart)!); await settle(); return out; },
+  async key(key: string, mods: any = {}) { document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...mods })); await new Promise(r => setTimeout(r, 60)); await settle(); return true; },
+  async tableCopy(table: number, r0: number, c0: number, r1: number, c1: number) { const tv = view.tables.get(table); if (!tv) throw new Error('no table ' + table); tv.select(r0, c0, r1, c1); tv.el.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 150)); return await tv.tsv(r0, c0, r1, c1); },
+  tableInfo(table: number) { const tv = view.tables.get(table); if (!tv) return null; const el = tv.el; return { cursorRow: tv.dto.cursorRow, rows: tv.dto.rows, scrollTop: (el.querySelector('.tscroll') as HTMLElement).scrollTop, curVisible: !!el.querySelector('tr.cur'), rendered: el.querySelectorAll('tbody tr').length }; },
+  async menu(chart: number, item: string) { view.plots.get(chart)!.menuAction(item); await new Promise(r => setTimeout(r, 120)); await settle(); return true; },
   /** Feature tour at step n / help guide section (captures, gates). */
   async tour(n = 0) { await help.startTour(n); await new Promise(r => setTimeout(r, 250)); await settle(); return !!document.querySelector('.tour-card'); },
   async help(section = 'start') { help.show(section); await new Promise(r => setTimeout(r, 100)); return !!document.querySelector('.help-pane'); },

@@ -312,7 +312,7 @@ public static partial class SelfTest
         G("startup_max_ui_stall_ms", Diag.MaxStallMs, "ms");
         foreach (var f in files) e.OpenFile(f);
         await JS(w, "await nx.test.settle(); return true;"); await Idle(w, 1500); Diag.ResetStats();
-        GC.Collect(); long ws0 = WsMb(); int exceptions = 0, drops = 0, closes = 0; var modes = new[] { "NAVIGATOR", "VIEW", "ANALYSIS", "REPORT" };
+        GC.Collect(); long ws0 = WsMb(); int exceptions = 0, drops = 0, closes = 0; var modes = e.ShowLegacyTabs ? new[] { "NAVIGATOR", "VIEW", "ANALYSIS", "REPORT" } : new[] { "NAVIGATOR", "VIEW" };
         for (int it = 0; it < iters; it++)
         {
             try

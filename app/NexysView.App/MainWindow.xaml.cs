@@ -117,6 +117,33 @@ public partial class MainWindow : Window
                     return null;
                 }
             case "capture": { string path = args.GetProperty("path").GetString()!; await CaptureAsync(path); return path; }
+            // 0.9.3: band / full range → CSV or TDMS of the given channels (dialog), chart PNG to file or clipboard, text to clipboard
+            case "export.range":
+                {
+                    bool tdms = args.TryGetProperty("kind", out var k) && k.GetString() == "tdms";
+                    var dlg = new SaveFileDialog { Filter = tdms ? "TDMS|*.tdms" : "CSV|*.csv", FileName = tdms ? "export.tdms" : "export.csv" };
+                    if (dlg.ShowDialog(this) != true) return null;
+                    var ids = args.TryGetProperty("channels", out var chs) && chs.ValueKind == JsonValueKind.Array ? chs.EnumerateArray().Select(x => x.GetString() ?? "").ToList() : new List<string>();
+                    int chart = args.TryGetProperty("chart", out var c) && c.ValueKind == JsonValueKind.Number ? c.GetInt32() : 0;
+                    double? x0 = args.TryGetProperty("x0", out var a0) && a0.ValueKind == JsonValueKind.Number ? a0.GetDouble() : null, x1 = args.TryGetProperty("x1", out var a1) && a1.ValueKind == JsonValueKind.Number ? a1.GetDouble() : null;
+                    string path = dlg.FileName;
+                    try { return await Task.Run(() => Engine.ExportRange(path, tdms, ids, chart, x0, x1)); } catch (Exception ex) { Engine.SetStatus("Export failed: " + ex.Message); return null; }
+                }
+            case "png.save":
+                {
+                    var dlg = new SaveFileDialog { Filter = "PNG|*.png", FileName = (args.TryGetProperty("name", out var nm) ? nm.GetString() : null) ?? "chart.png" };
+                    if (dlg.ShowDialog(this) != true) return null;
+                    File.WriteAllBytes(dlg.FileName, PngBytes(args)); Engine.SetStatus("Saved " + dlg.FileName); return dlg.FileName;
+                }
+            case "png.saveTo": { string path = args.GetProperty("path").GetString()!; File.WriteAllBytes(path, PngBytes(args)); return path; }
+            case "png.copy":
+                {
+                    using var ms = new MemoryStream(PngBytes(args));
+                    var bmp = new System.Windows.Media.Imaging.BitmapImage(); bmp.BeginInit(); bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; bmp.StreamSource = ms; bmp.EndInit(); bmp.Freeze();
+                    try { Clipboard.SetImage(bmp); Engine.SetStatus("Chart image copied to the clipboard"); } catch (Exception ex) { Engine.SetStatus("Clipboard failed: " + ex.Message); }
+                    return null;
+                }
+            case "clipboardText": { string text = args.GetProperty("text").GetString() ?? ""; try { Clipboard.SetText(text); } catch (Exception ex) { Engine.SetStatus("Clipboard failed: " + ex.Message); return false; } return true; }
             case "openUrl":
                 {
                     string url = args.GetProperty("url").GetString() ?? "";
@@ -127,6 +154,8 @@ public partial class MainWindow : Window
         }
         throw new NotSupportedException("unknown command " + cmd);
     }
+
+    static byte[] PngBytes(JsonElement args) { string d = args.GetProperty("dataUrl").GetString() ?? ""; int i = d.IndexOf(','); return Convert.FromBase64String(i >= 0 ? d[(i + 1)..] : d); }
 
     /// <summary>Screenshot of the page (what the user sees) as PNG.</summary>
     public async Task CaptureAsync(string path)
@@ -142,7 +171,7 @@ public partial class MainWindow : Window
 /// <summary>Version strings for the title bar, the page header and the About dialog (from the assembly's InformationalVersion).</summary>
 public static class AppInfo
 {
-    public static string Version { get; } = (typeof(AppInfo).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).FirstOrDefault() as System.Reflection.AssemblyInformationalVersionAttribute)?.InformationalVersion.Split('+')[0] ?? "0.9.2-beta";
+    public static string Version { get; } = (typeof(AppInfo).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).FirstOrDefault() as System.Reflection.AssemblyInformationalVersionAttribute)?.InformationalVersion.Split('+')[0] ?? "0.9.3-beta";
     public static bool IsBeta => Version.Contains("beta", StringComparison.OrdinalIgnoreCase);
     /// <summary>"0.9.0 beta"</summary>
     public static string VersionText => Version.Replace("-beta", " beta");

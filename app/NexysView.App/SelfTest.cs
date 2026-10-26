@@ -14,7 +14,7 @@ namespace NexysView.App;
 public static partial class SelfTest
 {
     public static string[] Args = Array.Empty<string>();
-    public static bool Enabled => Args.Length > 0 && Args[0] is "--shot" or "--selftest" or "--stress" or "--stress-analysis" or "--v3";
+    public static bool Enabled => Args.Length > 0 && Args[0] is "--shot" or "--selftest" or "--stress" or "--stress-analysis" or "--v3" or "--v093";
     static readonly List<string> Log = new();
     public static string OutDir = "";
     static readonly List<string> Gate = new();
@@ -40,6 +40,7 @@ public static partial class SelfTest
             else if (Args[0] == "--stress") await StressAsync(w);
             else if (Args[0] == "--stress-analysis") await StressAnalysisAsync(w);
             else if (Args[0] == "--v3") await V3Async(w);
+            else if (Args[0] == "--v093") await V093Async(w);
             else await FullAsync(w);
         }
         catch (Exception ex) { L("FATAL " + ex); }
@@ -99,6 +100,14 @@ public static partial class SelfTest
             e.TouchChart(chart.Id);
         }
         if (Arg("--select") != "") { var sc = e.State.Files.SelectMany(f => f.AllChannels).FirstOrDefault(c => c.Name == Arg("--select")); if (sc != null) e.Selected = sc.Id; }
+        if (Arg("--usex", "0") == "1" && e.Charts.Count > 0 && e.SuggestedX(e.Charts[0]) is { } sx) { e.SetXChannel(e.Charts[0].Id, sx.Id); await JS(w, "await nx.test.settle(); return true;"); }
+        if (Arg("--detail", "0") == "1" && e.Charts.Count > 0)
+        {
+            var ov = e.Charts[0]; var (fa, fb) = ov.Model.FullX(); double fw = fb - fa;
+            e.SetCursorMode(ov.Id, "band"); e.SetBand(ov.Id, true, fa + fw * double.Parse(Arg("--band0", "0.42"), System.Globalization.CultureInfo.InvariantCulture), fa + fw * double.Parse(Arg("--band1", "0.58"), System.Globalization.CultureInfo.InvariantCulture), true);
+            e.LinkDetail(ov.Id, e.Selected); e.ActiveChart = ov.Id; await Idle(w, 300); await JS(w, "await nx.test.settle(); return true;");
+        }
+        if (Arg("--table", "0") == "1" && e.Charts.Count > 0) { var t = e.AddTable(); foreach (var c in e.Charts[0].Model.Curves.Take(3)) e.TableAdd(t.Id, c.Channel.Id); var fx = e.Charts[0].Model.FullX(); e.SetCursor(e.Charts[0].Id, "a", fx.min + (fx.max - fx.min) * 0.3); }
         if (Arg("--analysis") != "" && chans.Count > 0)
         {
             var inCh = Arg("--select") != "" ? e.State.Files.SelectMany(f => f.AllChannels).FirstOrDefault(c => c.Name == Arg("--select")) ?? chans[0] : chans[0];
@@ -173,6 +182,8 @@ public static partial class SelfTest
     static Task FullAsync(MainWindow w) { Task t = Task.CompletedTask; FullImpl(w, ref t); return t; }
     static partial void V3Impl(MainWindow w, ref Task task);
     static Task V3Async(MainWindow w) { Task t = Task.CompletedTask; V3Impl(w, ref t); return t; }
+    static partial void V093Impl(MainWindow w, ref Task task);
+    static Task V093Async(MainWindow w) { Task t = Task.CompletedTask; V093Impl(w, ref t); return t; }
     static partial void StressImpl(MainWindow w, ref Task task);
     static Task StressAsync(MainWindow w) { Task t = Task.CompletedTask; StressImpl(w, ref t); return t; }
     static partial void StressAnalysisImpl(MainWindow w, ref Task task);

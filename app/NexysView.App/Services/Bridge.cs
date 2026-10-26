@@ -18,8 +18,7 @@ public sealed class Bridge
 {
     readonly CoreWebView2 _wv; readonly CoreWebView2Environment _env; readonly Engine _e; readonly Dispatcher _ui;
     readonly Func<string, JsonElement, Task<object?>> _host;
-    readonly FrameServer _fs = new();
-    readonly object _fsLock = new();
+    readonly Dictionary<int, FrameServer> _fss = new();   // one per chart: frames of different charts compute in parallel
     public const int BufferFloats = 2 * 1024 * 1024;   // 8 MB per chart (8192 columns × 2 × 64 curves fits; raw windows ≤ 6 samples/px)
     readonly Dictionary<int, (CoreWebView2SharedBuffer buf, float[] staging)> _buffers = new();
     readonly HashSet<int> _ack = new();   // charts whose shared buffer the page has received; others get the payload inline (base64)
@@ -27,6 +26,7 @@ public sealed class Bridge
     public int InlineFrames { get; private set; }
     sealed record FrameReq(int Chart, int W, double H, double Dpr, double? XMin, double? XMax, bool Commit, double? FromX0, double? FromX1, int Seq);
     readonly Dictionary<int, FrameReq> _pending = new();
+    readonly Dictionary<int, FrameReq> _lastReq = new();   // last request per chart: lets the host re-frame a chart itself (band drag) without an invalidate round-trip
     readonly HashSet<int> _inFlight = new();
     readonly HashSet<int> _invalid = new();
     bool _snapshotScheduled, _invalidateScheduled;
@@ -146,7 +146,29 @@ public sealed class Bridge
             case "zoomFull": _e.ZoomFull(I(r, "chart")); return null;
             case "setCursor": _e.SetCursor(I(r, "chart"), S(r, "which", "a"), DN(r, "x")); return null;
             case "clearCursors": _e.ClearCursors(I(r, "chart")); return null;
-            case "setCurve": _e.SetCurve(I(r, "chart"), I(r, "idx"), BN(r, "visible"), BN(r, "step"), IN(r, "color"), BN(r, "right")); return null;
+            case "setCurve": _e.SetCurve(I(r, "chart"), I(r, "idx"), BN(r, "visible"), BN(r, "step"), IN(r, "color"), BN(r, "right"), DN(r, "width"), BN(r, "points"), r.TryGetProperty("axis", out var axm) ? axm.GetString() : null); return null;
+            // 0.9.3
+            case "band":
+                {
+                    int bc = I(r, "chart"); _e.SetBand(bc, B(r, "on", true), D(r, "x0"), D(r, "x1"), B(r, "commit"));
+                    // live drag: compute the overview's and its detail charts' frames right away (2 hops instead of 4)
+                    var ids = new List<int> { bc }; ids.AddRange(_e.Charts.Where(c => c.DetailOf == bc).Select(c => c.Id));
+                    lock (_invalid) foreach (var id in ids) _invalid.Remove(id);
+                    foreach (var id in ids) Reframe(id);
+                    return null;
+                }
+            case "setCursorMode": _e.SetCursorMode(I(r, "chart"), S(r, "mode", "free")); return null;
+            case "setLinkX": _e.SetLinkX(I(r, "chart"), B(r, "on", true)); return null;
+            case "linkDetail": return _e.LinkDetail(I(r, "chart"), r.TryGetProperty("channel", out var dch) && dch.ValueKind == JsonValueKind.String ? dch.GetString() : null)?.Id;
+            case "setDetailChannel": _e.SetDetailChannel(I(r, "chart"), S(r, "channel")); return null;
+            case "zoomBox": _e.ZoomBox(I(r, "chart"), DN(r, "x0"), DN(r, "x1"), DN(r, "fy0"), DN(r, "fy1")); return null;
+            case "zoomBack": return _e.ZoomBack(I(r, "chart"));
+            case "setAxis": _e.SetAxis(I(r, "chart"), S(r, "axis"), BN(r, "auto"), DN(r, "min"), DN(r, "max"), BN(r, "log"), BN(r, "right")); return null;
+            case "dropGroup": return _e.DropGroup(SL(r, "channels"), r.TryGetProperty("mode", out var dmo) && dmo.ValueKind == JsonValueKind.String ? dmo.GetString() : null);
+            case "setDropMode": _e.DropMode = S(r, "mode", "unit") == "each" ? "each" : "unit"; _e.Touch(); return null;
+            case "setLegacyTabs": _e.ShowLegacyTabs = B(r, "on"); if (!_e.ShowLegacyTabs && _e.Mode is "ANALYSIS" or "REPORT") _e.Mode = "VIEW"; _e.Touch(); return null;
+            case "table.fromChart": { var tc = _e.Get(I(r, "chart")); if (tc == null) return null; var t = _e.AddTable(); foreach (var c in tc.Model.Curves) _e.TableAdd(t.Id, c.Channel.Id); return t.Id; }
+            case "export.rangeTo": { string path = S(r, "path"); bool tdms = S(r, "kind", "csv") == "tdms"; var ids = SL(r, "channels"); int ec = I(r, "chart"); double? ex0 = DN(r, "x0"), ex1 = DN(r, "x1"); return Task.Run(() => (object?)_e.ExportRange(path, tdms, ids, ec, ex0, ex1)); }
             case "setChart": _e.SetChart(I(r, "chart"), r.TryGetProperty("title", out var tt) ? tt.GetString() : null, BN(r, "grid"), BN(r, "legend"), BN(r, "lanes"), r.TryGetProperty("timeMode", out var tm) ? tm.GetString() : null); return null;
             case "setX": return _e.SetXChannel(I(r, "chart"), S(r, "channel"));
             case "clearX": _e.ClearX(I(r, "chart")); return null;
@@ -204,7 +226,7 @@ public sealed class Bridge
         var gone = _buffers.Keys.Where(id => id != 0 && _e.Get(id) == null).ToList();
         foreach (var id in gone)
         {
-            var (buf, _) = _buffers[id]; _buffers.Remove(id); _ack.Remove(id); _pending.Remove(id);
+            var (buf, _) = _buffers[id]; _buffers.Remove(id); _ack.Remove(id); _pending.Remove(id); _fss.Remove(id); _lastReq.Remove(id);
             Post(new { ev = "releaseBuffer", chart = id });
             try { buf.Dispose(); } catch { }
         }
@@ -214,9 +236,18 @@ public sealed class Bridge
     {
         int chart = I(r, "chart");
         var req = new FrameReq(chart, I(r, "w", 800), D(r, "h", 300), D(r, "dpr", 1), DN(r, "xmin"), DN(r, "xmax"), B(r, "commit"), DN(r, "fromX0"), DN(r, "fromX1"), I(r, "seq"));
-        EnsureBuffer(chart);
+        EnsureBuffer(chart); _lastReq[chart] = req;
         var ch = _e.Get(chart); if (ch == null) { Post(new { ev = "frame", chart, seq = req.Seq, gone = true }); return; }
-        if (req.XMin != null && req.XMax != null) _e.SetViewQuiet(chart, req.XMin.Value, req.XMax.Value, req.Commit, req.FromX0, req.FromX1);
+        if (req.XMin != null && req.XMax != null) _e.SetViewQuiet(chart, req.XMin.Value, req.XMax.Value, req.Commit, req.FromX0, req.FromX1);   // also moves the band / linked charts
+        if (_inFlight.Contains(chart)) { _pending[chart] = req; return; }
+        StartFrame(req);
+    }
+
+    /// <summary>Host-initiated frame with the chart's last viewport (engine x window): used when the engine changed a chart the page did not touch.</summary>
+    void Reframe(int chart)
+    {
+        if (!_lastReq.TryGetValue(chart, out var lr) || _e.Get(chart) == null || !_buffers.ContainsKey(chart)) return;
+        var req = lr with { XMin = null, XMax = null, Commit = false, FromX0 = null, FromX1 = null };
         if (_inFlight.Contains(chart)) { _pending[chart] = req; return; }
         StartFrame(req);
     }
@@ -225,13 +256,10 @@ public sealed class Bridge
     {
         var ch = _e.Get(req.Chart); if (ch == null) return;
         var (buf, staging) = _buffers[req.Chart];
+        var bandRef = _e.BandRefFor(ch);
+        if (!_fss.TryGetValue(req.Chart, out var fs)) _fss[req.Chart] = fs = new FrameServer();
         _inFlight.Add(req.Chart);
-        Task.Run(() =>
-        {
-            FrameServer.Result res;
-            lock (_fsLock) res = _fs.Compute(ch, req.W, req.H, req.Dpr, staging);
-            return res;
-        }).ContinueWith(t =>
+        Task.Run(() => fs.Compute(ch, req.W, req.H, req.Dpr, staging, bandRef)).ContinueWith(t =>
         {
             _inFlight.Remove(req.Chart);
             if (t.IsFaulted) { Diag.Trace("frame failed " + t.Exception?.InnerException?.Message); Post(new { ev = "frame", chart = req.Chart, seq = req.Seq, error = t.Exception?.InnerException?.Message }); }

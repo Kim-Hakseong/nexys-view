@@ -2,7 +2,7 @@
 // (file 30px → group 26px → channel 26px, name hierarchy on '.' and '/'), drag source for channels (Ctrl-click two → XY).
 import { bridge } from './bridge';
 import { I } from './icons';
-import { DRAG_CH } from './plot';
+import { DRAG_CH, DRAG_GROUP } from './plot';
 import { ChannelDto, FileDto, State } from './types';
 import { curveColor, esc, fmtInt, h, sparkSvg } from './util';
 
@@ -116,10 +116,10 @@ export class Navigator {
     const chev = `<span class="chev${r.open ? ' open' : ''}">${I.chev()}</span>`;
     if (r.kind === 'file') {
       const sel = S.selectedFiles.includes(r.file.name) || S.selectedFile === r.file.name && S.selectedFiles.length === 0;
-      return `<div class="row-file${S.selectedFiles.includes(r.file.name) ? ' sel' : ''}" data-i="${i}" ${pos}>${chev}<span class="dbic">${I.db()}</span><span class="name">${esc(r.name)}</span><span class="chip">${esc(r.meta)}</span></div>`;
+      return `<div class="row-file${S.selectedFiles.includes(r.file.name) ? ' sel' : ''}" data-i="${i}" draggable="true" title="끌어서 VIEW에 놓으면 파일 전체가 차트로" ${pos}>${chev}<span class="dbic">${I.db()}</span><span class="name">${esc(r.name)}</span><span class="chip">${esc(r.meta)}</span></div>`;
     }
-    if (r.kind === 'group') return `<div class="row-grp" data-i="${i}" ${pos}>${chev}<span class="name">${esc(r.name)}</span><span class="m">${esc(r.meta)}</span></div>`;
-    if (r.kind === 'node') return `<div class="row-grp" data-i="${i}" ${pos} style="position:absolute;top:${top}px;left:0;right:0;padding-left:${26 + 16 * (r.depth - 1)}px">${chev}<span class="name">${esc(r.name)}</span><span class="m">${esc(r.meta)}</span></div>`;
+    if (r.kind === 'group') return `<div class="row-grp" data-i="${i}" draggable="true" title="끌어서 VIEW에 놓으면 그룹 전체가 차트로" ${pos}>${chev}<span class="name">${esc(r.name)}</span><span class="m">${esc(r.meta)}</span></div>`;
+    if (r.kind === 'node') return `<div class="row-grp" data-i="${i}" draggable="true" ${pos} style="position:absolute;top:${top}px;left:0;right:0;padding-left:${26 + 16 * (r.depth - 1)}px">${chev}<span class="name">${esc(r.name)}</span><span class="m">${esc(r.meta)}</span></div>`;
     const c = r.ch!; const sel = S.selected === c.id;
     const inChart = S.charts.find(ch => ch.curves.some(cv => cv.channelId === c.id));
     const spark = S.sparks[c.id] && (sel || inChart) ? `<span class="spark">${sparkSvg(S.sparks[c.id], inChart ? curveColor(inChart.curves.find(cv => cv.channelId === c.id)!.color, S.plot) : '#E8601C')}</span>` : '';
@@ -151,13 +151,24 @@ export class Navigator {
       if (this.picked.length === 2 && this.picked.includes(id)) { chans = this.picked.map(p => this.find(p)!).filter(Boolean); e.dataTransfer.setData('application/x-nexys-xy', '1'); }
       else chans = [r.ch!];
     } else {
-      // whole group / node: every matching channel under it (≤64)
-      const idx = this.rows.indexOf(r); for (let i = idx + 1; i < this.rows.length && this.rows[i].depth > r.depth; i++) if (this.rows[i].ch) chans.push(this.rows[i].ch!); chans = chans.slice(0, 64);
+      // whole file / group / name node: every channel under it from the file data (collapsed children included), ≤ 256
+      chans = this.channelsUnder(r).slice(0, 256);
+      e.dataTransfer.setData(DRAG_GROUP, r.kind);
     }
     if (chans.length === 0) { e.preventDefault(); return; }
     e.dataTransfer.setData(DRAG_CH, JSON.stringify(chans.map(c => ({ id: c.id, name: c.name, time: c.time }))));
     e.dataTransfer.setData('text/plain', chans.map(c => c.name).join(', '));
     e.dataTransfer.effectAllowed = 'copyMove';
+  }
+  /** Channels under a file / group / name-node row (search filter applied like the tree). */
+  channelsUnder(r: Row): ChannelDto[] {
+    const m = matcher(this.query); const q = this.query.trim().length > 0;
+    const keep = (c: ChannelDto, g: string) => !c.isText && (!q || m(c.name) || m(g));
+    if (r.kind === 'file') return r.file.groups.flatMap(g => g.channels.filter(c => keep(c, g.name)));
+    const gname = (r.key.match(/\/g:([^/]*)/) ?? [])[1] ?? ''; const g = r.file.groups.find(x => x.name === gname); if (!g) return [];
+    if (r.kind === 'group') return g.channels.filter(c => keep(c, g.name));
+    const path = r.key.split('/n:').slice(1);   // node path parts
+    return g.channels.filter(c => keep(c, g.name) && nameParts(c.name).length > path.length && path.every((p, i) => nameParts(c.name)[i] === p));
   }
   find(id: string): ChannelDto | undefined { for (const f of this.S?.files ?? []) for (const g of f.groups) for (const c of g.channels) if (c.id === id) return c; return undefined; }
   setSearch(q: string) { this.input.value = q; this.query = q; this.rebuild(); }

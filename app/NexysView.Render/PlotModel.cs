@@ -10,6 +10,8 @@ public sealed class YAxis
     public double Max { get; set; } = 1;
     public bool Auto { get; set; } = true;
     public bool Right { get; set; }
+    /// <summary>0.9.3: logarithmic scale (values ≤ 0 are skipped; Min/Max stay in data units).</summary>
+    public bool Log { get; set; }
     public YAxis(string id) => Id = id;
 }
 
@@ -29,6 +31,8 @@ public sealed class Curve
     public bool Visible { get; set; } = true;
     public YAxis Axis { get; set; }
     public float Width { get; set; } = 1f;
+    /// <summary>0.9.3: draw markers only (no connecting line).</summary>
+    public bool Points { get; set; }
     public Curve(Channel ch, YAxis axis, int colorIndex) { Channel = ch; Axis = axis; ColorIndex = colorIndex; }
     public string Label => Channel.DisplayName;
     /// <summary>x in plot units of sample i.</summary>
@@ -70,6 +74,34 @@ public sealed class PlotModel
     public double XTimeOrigin { get; set; }
     /// <summary>Stack step curves as thin 0/1 lanes under the plot.</summary>
     public bool DigitalLanes { get; set; }
+
+    // ---- 0.9.3: band cursor, x-axis link, zoom history
+    /// <summary>"free" = cursors A/B, "band" = start/end handles with a translucent region and segment read-outs.</summary>
+    public string CursorMode { get; set; } = "free";
+    public bool BandEnabled { get; set; }
+    public double BandX0 { get; set; }
+    public double BandX1 { get; set; }
+    /// <summary>True while the band is being dragged: frames skip the band statistics (the page keeps the last read-outs).</summary>
+    public bool BandLive { get; set; }
+    /// <summary>Follow pan/zoom of the other charts that share the same x source (default on; detail charts never link).</summary>
+    public bool LinkX { get; set; } = true;
+    public const int ZoomHistoryMax = 20;
+    public readonly List<(double x0, double x1, List<(string id, bool auto, double min, double max)> axes)> ZoomHistory = new();
+    /// <summary>Remember a view (x window + y ranges) so Backspace can return to it.</summary>
+    public void PushZoom(double x0, double x1)
+    {
+        if (ZoomHistory.Count > 0 && ZoomHistory[^1].x0 == x0 && ZoomHistory[^1].x1 == x1) return;
+        ZoomHistory.Add((x0, x1, YAxes.Select(a => (a.Id, a.Auto, a.Min, a.Max)).ToList()));
+        while (ZoomHistory.Count > ZoomHistoryMax) ZoomHistory.RemoveAt(0);
+    }
+    public bool ZoomBack()
+    {
+        if (ZoomHistory.Count == 0) return false;
+        var h = ZoomHistory[^1]; ZoomHistory.RemoveAt(ZoomHistory.Count - 1);
+        XMin = h.x0; XMax = h.x1;
+        foreach (var s in h.axes) { var a = YAxes.FirstOrDefault(x => x.Id == s.id); if (a != null) { a.Auto = s.auto; a.Min = s.min; a.Max = s.max; } }
+        return true;
+    }
     /// <summary>Comparison alignment (v3 B4): "none" | "start" | "zero" | "manual".</summary>
     public string AlignMode { get; set; } = "none";
     public double AlignOffsetMs { get; set; }
