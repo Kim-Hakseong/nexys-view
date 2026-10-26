@@ -52,5 +52,7 @@
 > Nexys VIEW 0.9.0 베타를 공유합니다. TDMS/TDM 측정 로그 뷰어로, VeriStand 로그의 System Time을 X축으로 바로 쓰고 1,000만 샘플 곡선도 끊김 없이 움직입니다.
 > 설치: https://github.com/Kim-Hakseong/nexys-view/releases 에서 `NexysView-0.9.0-beta-setup.exe`(설치형) 또는 `NexysView-0.9.0-beta-portable.exe`(폴더에 두고 실행)를 받으세요. Windows 10/11 64비트, WebView2 런타임은 없으면 설치 중 자동으로 받습니다.
 > 써 보기: 파일을 창에 드롭 → 채널을 차트에 드롭 → 아래 x축 영역에 System Time을 드롭하면 시간축이 됩니다. 휠 줌, 드래그 이동, 클릭 커서 A / Shift+클릭 커서 B.
-> 베타라 화면과 기능이 바뀔 수 있습니다. 문제는 앱에서 F1 → GitHub Issues로, 또는 저장소 Issues에 Windows 버전·재현 순서·파일 종류를 적어 올려 주세요.
+> VeriStand 로그 파일로 써보기 — X축 시간 채널(헤더의 USE SYSTEM TIME AS X), 디지털 레인(command/Ready/Fault 같은 상태 신호), 파일 비교(NAVIGATOR → COMPARE n FILES, 시작 시각/0 s/수동 정렬)가 핵심 기능입니다.
+> 피드백은 GitHub Issues로 (앱 정보 대화상자 F1에 링크). 멈춤·오류는 이벤트 로그 캡처(이벤트 뷰어 → Windows 로그 → 응용 프로그램, NexysView 항목)와 재현 순서를 함께 올려 주세요.
+> 베타라 화면과 기능이 바뀔 수 있습니다. Issues에는 Windows 버전·파일 종류(채널·샘플 수)도 적어 주시면 빠르게 봅니다.
 > 알려진 제한: 메모리 사용량이 큽니다(10곡선×10M 기준 약 1.1 GB), 포터블에는 Python DataPlugin이 없습니다.
