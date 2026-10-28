@@ -1,8 +1,8 @@
 ; Nexys VIEW — Inno Setup script (beta.md §2). Build: ISCC.exe installer\NexysView.iss
 ; Input: ..\app\dist\app\* (dotnet publish, self-contained win-x64), bootstrapper MicrosoftEdgeWebview2Setup.exe in installer\redist\
 #define MyAppName "Nexys VIEW"
-#define MyAppVersion "0.10.0-beta"
-#define MyAppVersionText "0.10.0 beta"
+#define MyAppVersion "1.0.0-rc"
+#define MyAppVersionText "1.0.0 rc"
 #define MyAppPublisher "Nexys"
 #define MyAppExeName "NexysView.exe"
 #define MyAppUrl "https://github.com/Kim-Hakseong/nexys-view"

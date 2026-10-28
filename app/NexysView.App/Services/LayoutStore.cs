@@ -51,6 +51,9 @@ public static class LayoutStore
         /// <summary>0.10.0: features.icdExport — ICD import / bus-simulator project export module (off by default).</summary>
         public bool IcdExport { get; set; }
         public string IcdTemplateDir { get; set; } = "";
+        /// <summary>1.0: saved bus-filter combinations and the list's time display (rel|abs|delta).</summary>
+        public List<Mil1553Service.FilterPreset> BusFilters { get; set; } = new();
+        public string BusTime { get; set; } = "rel";
     }
 
     public static readonly bool RestoreSession = false;   // not const: keeps the restore code compiled without CS0162
@@ -66,7 +69,7 @@ public static class LayoutStore
             var d = new Dto
             {
                 Version = AppInfo.Version, Theme = e.Theme, Plot = e.Plot, W = w.Width, H = w.Height, X = w.Left, Y = w.Top, Maximized = w.WindowState == WindowState.Maximized,
-                Files = e.State.Files.Where(f => File.Exists(f.Path)).Select(f => f.Path).ToList(), Developer = e.Developer, TourSeen = e.TourSeen, ShowLegacyTabs = e.ShowLegacyTabs, DropMode = e.DropMode, Mode = e.Mode, IcdExport = e.IcdExport, IcdTemplateDir = e.IcdTemplateDir,
+                Files = e.State.Files.Where(f => File.Exists(f.Path)).Select(f => f.Path).ToList(), Developer = e.Developer, TourSeen = e.TourSeen, ShowLegacyTabs = e.ShowLegacyTabs, DropMode = e.DropMode, Mode = e.Mode, IcdExport = e.IcdExport, IcdTemplateDir = e.IcdTemplateDir, BusFilters = e.Mil1553.Presets.ToList(), BusTime = e.BusTime,
                 Pages = e.Pages.Select(p => new PageDto { Id = p.Id, Name = p.Name, Columns = p.Columns }).ToList(), ActivePage = e.ActivePage, AutoPage = e.AutoPage, AutoPageN = e.AutoPageN,
                 Windows = w.WindowRects(),
                 TreeHierarchy = new Dictionary<string, bool>(e.Hier),
@@ -134,7 +137,7 @@ public static class LayoutStore
             }
             e.Developer = d.Developer; e.TourSeen = d.TourSeen; e.ShowLegacyTabs = d.ShowLegacyTabs; e.DropMode = d.DropMode == "each" ? "each" : "unit";
             if (!e.ShowLegacyTabs && d.Mode is "ANALYSIS" or "REPORT") d.Mode = "VIEW";
-            e.IcdExport = d.IcdExport; e.IcdTemplateDir = d.IcdTemplateDir ?? "";
+            e.IcdExport = d.IcdExport; e.IcdTemplateDir = d.IcdTemplateDir ?? ""; e.Mil1553.Presets.Clear(); e.Mil1553.Presets.AddRange(d.BusFilters ?? new()); e.BusTime = d.BusTime is "abs" or "delta" ? d.BusTime : "rel";
             e.Mode = d.Mode is "NAVIGATOR" or "VIEW" or "ANALYSIS" or "REPORT" or "MIL1553" ? d.Mode : "VIEW";
             e.State.Undo.Clear();
         }

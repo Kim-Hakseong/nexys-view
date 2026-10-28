@@ -448,3 +448,48 @@ input, select { font-family: var(--sans); }
 .modal.settings { width: 420px; }
 .modal.settings .opt { display: flex; gap: 10px; align-items: flex-start; padding: 12px 0; font-size: 12px; }
 .modal.settings .opt span > span { display: block; margin-top: 2px; }
+
+/* ---------- 1.0-rc: BUS mode additions, ICD dialog, settings ---------- */
+.bus-empty { flex: 1; display: flex; align-items: center; justify-content: center; }
+.bus-empty-in { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--muted); text-align: center; max-width: 520px; }
+.bus-empty-in b { font-size: 14px; color: var(--text); } .bus-empty-in p { margin: 0; font-size: 12px; line-height: 1.6; } .bus-empty-in .btns { display: flex; gap: 8px; } .bus-empty-in .hints { font: 11px var(--mono); color: var(--faint); }
+.pill.primary svg { width: 14px; height: 14px; margin-right: 6px; }
+.m1553-filters { flex-wrap: wrap; min-height: 40px; height: auto; padding: 6px 12px; }
+.m1553-filters .sel { height: 24px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--panel); font: 11px var(--sans); color: var(--text); padding: 0 6px; max-width: 140px; }
+.m1553-scroll .thead span.sortable { cursor: pointer; } .m1553-scroll .thead span.sortable:hover, .m1553-scroll .thead span.on { color: var(--text); }
+.m1553-scroll:focus-visible { outline: 2px solid var(--border-strong); outline-offset: -2px; }
+.m1553-scroll .trow.err { background: var(--panel-alt); }
+.m1553-dec .card-h .pill { margin-left: 8px; }
+.m1553-words.raw td { color: var(--muted); }
+.m1553-stats { flex: 0 0 260px; min-height: 0; display: none; } .m1553-stats.on { display: flex; }
+.m1553-stats .stat4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.m1553-stats .stat4 .k { font-size: 10px; letter-spacing: 0.06em; color: var(--faint); } .m1553-stats .stat4 .v { font: 500 14px var(--mono); }
+.m1553-stats .bar { display: grid; grid-template-columns: 56px 1fr 90px; gap: 8px; align-items: center; padding: 3px 12px; font: 11px var(--mono); }
+.m1553-stats .bar i { display: block; height: 10px; background: var(--border-strong); border-radius: 2px; } .m1553-stats .bar.top { grid-template-columns: 56px 1fr 70px; }
+.m1553-stats .bar em { font-style: normal; }
+.col-pick .col-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 12px; padding: 8px 0; } .col-pick .opt { display: flex; gap: 8px; align-items: center; font-size: 12px; padding: 4px 0; }
+.modal.icd { width: 1100px; height: 720px; max-width: calc(100vw - 48px); max-height: calc(100vh - 48px); display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.icd-h { height: 44px; flex: 0 0 44px; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--border); } .icd-h b { font-size: 13px; }
+.icd-tabs { display: flex; gap: 2px; margin-left: 12px; } .icd-tabs .tab { height: 28px; padding: 0 12px; border: 0; background: transparent; font: 600 11px var(--sans); letter-spacing: 0.05em; color: var(--muted); border-radius: 999px; } .icd-tabs .tab.on { color: var(--text); box-shadow: inset 0 -2px 0 var(--text); }
+.icd-h .xbtn { margin-left: auto; }
+.icd-body { flex: 1; display: flex; min-height: 0; } .icd-pane { flex: 1; display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--border); } .icd-pane:last-child { border-right: 0; }
+.icd-pane .ph { height: 32px; flex: 0 0 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border); font: 600 10px var(--sans); letter-spacing: 0.06em; color: var(--muted); } .icd-pane .ph .m { margin-left: auto; font: 10px var(--mono); color: var(--faint); } .icd-pane .ph .pill { margin-left: 8px; }
+.icd-pane .scroll { flex: 1; overflow: auto; min-height: 0; } .icd-pane .pad { padding: 10px 12px; font-size: 12px; } .icd-pane .pad p { margin: 0 0 10px; line-height: 1.6; }
+.icd-tbl { border-collapse: collapse; width: 100%; font: 11px var(--mono); } .icd-tbl th { position: sticky; top: 0; text-align: left; font: 600 10px var(--sans); letter-spacing: 0.06em; color: var(--muted); background: var(--panel-alt); height: 24px; padding: 0 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.icd-tbl td { height: 24px; padding: 0 10px; border-bottom: 1px solid var(--border); white-space: nowrap; } .icd-tbl tr.sel td { background: var(--panel-alt); font-weight: 500; }
+.icd-tbl .cell { height: 20px; border: 1px solid transparent; background: transparent; font: 11px var(--mono); color: var(--text); box-sizing: border-box; border-radius: 3px; } .icd-tbl .cell:focus { border-color: var(--border-strong); background: var(--panel); outline: 0; }
+.icd-tbl select.cell { padding: 0 2px; }
+.icd-msgs { flex: 0 0 auto; max-height: 120px; overflow: auto; padding: 8px 12px; border-top: 1px solid var(--border); font-size: 11px; display: flex; flex-direction: column; gap: 3px; } .warnv { color: var(--amber); } .okv { color: var(--green); }
+.icd-map { display: grid; grid-template-columns: 90px 1fr 1fr; gap: 4px 10px; padding: 8px 12px; font-size: 11px; align-items: center; } .icd-map .k { font: 600 10px var(--sans); letter-spacing: 0.06em; color: var(--faint); } .icd-map .k.req { color: var(--text); } .icd-map .sel { height: 24px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--panel); font: 11px var(--mono); color: var(--text); max-width: 160px; }
+.icd-f { height: 40px; flex: 0 0 40px; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-top: 1px solid var(--border); } .icd-f .sp { flex: 1; }
+.icd-prev { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; } .icd-prev .mono { font-size: 11px; }
+.modal.icd .opt { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 12px; } .modal.icd .opt span > span { display: block; margin-top: 2px; }
+.modal.settings { width: 560px; } .modal.settings .sec { padding: 8px 0; border-bottom: 1px solid var(--border); } .modal.settings .sec:last-of-type { border-bottom: 0; }
+.modal.settings h4 { margin: 0 0 6px; font: 600 10px var(--sans); letter-spacing: 0.08em; color: var(--faint); }
+.modal.settings .row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; } .modal.settings .row .d { color: var(--muted); font-size: 11px; margin-left: auto; text-align: right; max-width: 260px; }
+.modal.settings .row .in { height: 24px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--panel); font: 11px var(--mono); color: var(--text); padding: 0 8px; flex: 1; min-width: 0; }
+/* 1.0-rc fixes from the --v100rc captures: the filter bar may wrap to two rows (it must grow, not overlap the header); the decode
+   key/value block inherits .kv's fixed 22px height (overlapped the raw-word table); narrower ICD word cells keep UNIT visible. */
+.m1553-filters { flex: 0 0 auto; row-gap: 6px; }
+.m1553-dec .kv { height: auto; }
+.icd-tbl.edit input.cell[data-f=name] { width: 110px !important; } .icd-tbl.edit input.cell[data-f=scale], .icd-tbl.edit input.cell[data-f=offset] { width: 52px !important; } .icd-tbl.edit input.cell[data-f=unit] { width: 44px !important; }

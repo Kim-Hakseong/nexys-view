@@ -157,6 +157,15 @@ public static class BusSimProject
 
     public sealed class Result { public string? Cdv; public string? Cpj; public string Script = ""; public string HubJson = ""; public string HubCsv = ""; public int Messages; public int Words; public bool FileWritten; }
 
+    /// <summary>True when the bus simulator's COM shell is registered on this PC: the ProgID is taken from the BUS_SIM_PROGID environment
+    /// variable (no vendor identifier is built into the app) and looked up under HKEY_CLASSES_ROOT.</summary>
+    public static bool SimulatorDetected()
+    {
+        string? progId = Environment.GetEnvironmentVariable("BUS_SIM_PROGID");
+        if (string.IsNullOrWhiteSpace(progId) || !OperatingSystem.IsWindows()) return false;
+        try { using var k = Microsoft.Win32.Registry.ClassesRoot.OpenSubKey(progId); return k != null; } catch { return false; }
+    }
+
     /// <summary>Export: always writes hub JSON/CSV + the automation script; writes the project files when a template folder is given.</summary>
     public static Result Export(IcdHub hub, string outDir, string? templateDir, bool withRt)
     {

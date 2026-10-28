@@ -11,7 +11,9 @@ import { Report } from './report';
 import { State } from './types';
 import { esc, fmtInt, h } from './util';
 import { ViewArea } from './view';
-import { Mil1553Mode } from './mil1553';
+import { BusMode } from './bus';
+import { IcdDialog } from './icd';
+import { showSettings } from './settings';
 
 let S: State | null = null;
 const app = document.getElementById('app')!;
@@ -20,12 +22,12 @@ const main = h(`<main class="main"></main>`);
 const ftr = h(`<footer class="ftr"><span class="d"></span><span class="txt"></span><span class="r"></span></footer>`);
 app.append(hdr, main, ftr);
 const help = new Help();
-const nav = new Navigator(); const view = new ViewArea(); const props = new Properties(); const navMode = new NavMode(); const analysis = new Analysis(); const report = new Report(); const m1553 = new Mil1553Mode();
+const nav = new Navigator(); const view = new ViewArea(); const props = new Properties(); const navMode = new NavMode(); const analysis = new Analysis(); const report = new Report(); const m1553 = new BusMode(); const icd = new IcdDialog();
 let frameInfo = '';
 
 function renderHeader() {
   if (!S) return;
-  const mode = (m: string, icon: string) => `<button type="button" class="tool mode${S!.mode === m ? ' on' : ''}" data-mode="${m}" aria-label="${m}" aria-pressed="${S!.mode === m}" title="${m} (Ctrl+${m === 'NAVIGATOR' ? 1 : m === 'VIEW' ? 2 : m === 'ANALYSIS' ? 3 : 4})">${icon}<span>${m}</span></button>`;
+  const mode = (m: string, icon: string, label = m) => `<button type="button" class="tool mode${S!.mode === m ? ' on' : ''}" data-mode="${m}" aria-label="${label}" aria-pressed="${S!.mode === m}" title="${label} (Ctrl+${m === 'NAVIGATOR' ? 1 : m === 'VIEW' ? 2 : m === 'MIL1553' ? 3 : m === 'ANALYSIS' ? 4 : 5})">${icon}<span>${label}</span></button>`;
   const tool = (a: string, icon: string, label: string, title: string, disabled = false) => `<button type="button" class="tool" data-a="${a}" aria-label="${label}" title="${title}"${disabled ? ' disabled' : ''}>${icon}<span>${label}</span></button>`;
   const app = (S as any).app ?? { versionText: '', beta: false };
   if (WIN > 0) {
@@ -36,7 +38,7 @@ function renderHeader() {
     return;
   }
   hdr.innerHTML = `<div class="hdr-brand"><div class="hdr-logo" data-a="about" title="About Nexys VIEW (F1)"><img src="brand/Logo.png" alt="Nexys VIEW"></div><div class="hdr-name"><small>${esc((app.versionText || '').toUpperCase())}</small></div></div>
-    <div class="hdr-tools"><nav aria-label="Mode" class="tools-modes">${mode('NAVIGATOR', I.list(15))}${mode('VIEW', I.lineC(15))}${S.legacyTabs ? mode('ANALYSIS', I.sliders(15)) + mode('REPORT', I.file(15)) : ''}${S.files.some(f => f.format === 'MIL1553') || S.mode === 'MIL1553' ? mode('MIL1553', I.table(15)) : ''}</nav><div class="vsep"></div>${tool('open', I.folder(), 'OPEN', 'Open file (Ctrl+O)')}${tool('save', I.save(), 'SAVE', 'Save all channels as TDMS (Ctrl+S)')}<div class="vsep"></div>${tool('undo', I.undo(), 'UNDO', S.undo.can ? `Undo ${S.undo.name} (Ctrl+Z)` : 'Undo (Ctrl+Z)', !S.undo.can)}${tool('redo', I.redo(), 'REDO', 'Redo (Ctrl+Y)', !S.undo.canRedo)}<div class="vsep"></div>${tool('theme', S.theme === 'dark' ? I.sun() : I.theme(), 'THEME', 'Toggle light / dark chrome (Ctrl+T)')}${tool('plot', I.plot(), 'PLOT · ' + S.plot.toUpperCase(), 'Toggle dark / light plot (Ctrl+P)')}<div class="vsep"></div></div>
+    <div class="hdr-tools"><nav aria-label="Mode" class="tools-modes">${mode('NAVIGATOR', I.list(15))}${mode('VIEW', I.lineC(15))}${S.legacyTabs ? mode('ANALYSIS', I.sliders(15)) + mode('REPORT', I.file(15)) : ''}${S.files.some(f => f.format === 'MIL1553' || f.format === 'A429') || S.mode === 'MIL1553' ? mode('MIL1553', I.table(15), 'BUS') : ''}</nav><div class="vsep"></div>${tool('open', I.folder(), 'OPEN', 'Open file (Ctrl+O)')}${tool('save', I.save(), 'SAVE', 'Save all channels as TDMS (Ctrl+S)')}<div class="vsep"></div>${tool('undo', I.undo(), 'UNDO', S.undo.can ? `Undo ${S.undo.name} (Ctrl+Z)` : 'Undo (Ctrl+Z)', !S.undo.can)}${tool('redo', I.redo(), 'REDO', 'Redo (Ctrl+Y)', !S.undo.canRedo)}<div class="vsep"></div>${tool('theme', S.theme === 'dark' ? I.sun() : I.theme(), 'THEME', 'Toggle light / dark chrome (Ctrl+T)')}${tool('plot', I.plot(), 'PLOT · ' + S.plot.toUpperCase(), 'Toggle dark / light plot (Ctrl+P)')}<div class="vsep"></div></div>
     ${(S as any).features?.icdExport ? `<button type="button" class="tool icon" data-a="icdImport" aria-label="ICD IMPORT" title="ICD 가져오기 (CSV / JSON)">${I.tag()}</button><button type="button" class="tool icon" data-a="icdExport" aria-label="EXPORT PROJECT" title="버스 시뮬레이터 프로젝트 내보내기">${I.link()}</button><div class="vsep"></div>` : ''}<button type="button" class="tool icon" data-a="settings" aria-label="SETTINGS" title="설정">${I.sliders()}</button>
     <div class="vsep"></div><button type="button" class="tool icon" data-a="help" aria-label="HELP" title="사용 가이드 · 기능 투어 (F1)">${I.help()}</button>
     <div class="led-pill"><span class="led ${S.status.led}"></span><span class="led-text">${S.status.led.toUpperCase()}</span></div>`;
@@ -47,9 +49,9 @@ hdr.addEventListener('click', e => {
   const a = (t.closest('[data-a]') as HTMLElement | null)?.dataset.a; if (!a) return;
   if (a === 'about') { showAbout(); return; }
   if (a === 'help') { help.show(); return; }
-  if (a === 'settings') { showSettings(); return; }
-  if (a === 'icdImport') { bridge.call('icd.importDialog'); return; }
-  if (a === 'icdExport') { bridge.call('icd.exportDialog'); return; }
+  if (a === 'settings') { if (S) showSettings(S); return; }
+  if (a === 'icdImport') { icd.show('import'); return; }
+  if (a === 'icdExport') { icd.show('export'); return; }
   if (a === 'returnAll') { bridge.call('window.returnAll', { id: WIN }); return; }
   if (a === 'open') bridge.call('openDialog'); else if (a === 'save') bridge.call('saveDialog'); else if (a === 'undo') bridge.call('undo'); else if (a === 'redo') bridge.call('redo');
   else if (a === 'theme') bridge.call('setTheme', { theme: S?.theme === 'dark' ? 'light' : 'dark' }); else if (a === 'plot') bridge.call('setPlot', { plot: S?.plot === 'dark' ? 'light' : 'dark' }); else if (a === 'dev') bridge.call('setDeveloper', { on: !S?.developer });
@@ -97,28 +99,14 @@ bridge.on('status', m => { if (!S) return; S.status = { text: m.text, led: m.led
 bridge.on('invalidate', m => { const ids: number[] = m.charts; const all = ids.includes(-1); for (const [id, pv] of view.plots) if (all || ids.includes(id)) pv.request({ adopt: true }); if (S?.mode === 'ANALYSIS' && (all || ids.includes(0))) (analysis as any).preview?.request(); });
 bridge.on('buffer', () => { /* buffers arrive before the first frame; nothing to do */ });
 
-// ---------- Settings (header): feature modules
-function showSettings() {
-  if (!S || document.querySelector('.settings')) return;
-  const on = !!(S as any).features?.icdExport;
-  const dlg = h(`<div class="modal-bg"><div class="modal settings" role="dialog"><div class="lblh">SETTINGS</div>
-    <label class="opt"><input type="checkbox" data-f="icdExport"${on ? ' checked' : ''}><span><b>ICD export module</b><span class="muted11">features.icdExport — 툴바에 ICD 가져오기 / 버스 시뮬레이터 프로젝트 내보내기 버튼을 켭니다 (기본 꺼짐)</span></span></label>
-    <div class="opt" style="flex-direction:column;align-items:stretch;gap:4px"><b>템플릿 프로젝트 폴더</b><span class="muted11">시뮬레이터의 1553 템플릿 프로젝트(.CPJ + 장치 .CDV) 폴더. 비우면 허브 JSON/CSV와 자동화 스크립트만 내보냅니다.</span><input class="in" data-f="icdTemplateDir" value="${esc((S as any).mil1553?.templateDir || '')}" placeholder="C:\\...\\1553 template project" spellcheck="false" style="font-family:var(--mono);font-size:11px;height:24px;padding:0 8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--panel);color:var(--text)"></div>
-    <div class="btns"><button class="pill h30 primary" data-b="ok">CLOSE</button></div></div></div>`);
-  dlg.addEventListener('change', e => { const t = e.target as HTMLInputElement; if (t.dataset.f === 'icdExport') bridge.call('setFeature', { name: 'icdExport', on: t.checked }); if (t.dataset.f === 'icdTemplateDir') bridge.call('setFeature', { name: 'icdTemplateDir', value: t.value }); });
-  dlg.addEventListener('click', e => { const t = e.target as HTMLElement; if ((t.closest('[data-b]') as HTMLElement | null)?.dataset.b === 'ok' || t === dlg) dlg.remove(); });
-  document.body.append(dlg);
-}
-
 // ---------- About (F1 / logo): version, beta notice, feedback link
 function showAbout() {
   if (!S || document.querySelector('.about')) return;
   const app = (S as any).app ?? {};
   const dlg = h(`<div class="modal-bg"><div class="modal about"><div style="display:flex;align-items:center;gap:10px"><img src="brand/Logo.png" alt="" style="height:18px"><span class="ver">${esc(app.versionText || '')}</span></div>
     <div class="ttl">Nexys VIEW — measurement data viewer</div>
-    <p>${app.beta ? '베타 버전입니다. 기능과 화면이 바뀔 수 있고, 문제를 발견하면 아래 피드백으로 알려 주세요.' : ''}</p>
+    <p>${app.beta ? '정식 출시 전 버전입니다. 기능과 화면이 바뀔 수 있고, 문제를 발견하면 아래 피드백으로 알려 주세요.' : ''}</p>
     <p>피드백: <a href="#" data-url="${esc(app.issues || '')}" style="color:var(--accent2);text-decoration:underline">GitHub Issues</a> · 저장소: <a href="#" data-url="${esc(app.repo || '')}" style="color:var(--accent2);text-decoration:underline">${esc(app.repo || '')}</a></p>
-    <div class="lic">Fonts: Inter, Instrument Serif, JetBrains Mono, Noto Sans KR (SIL Open Font License 1.1) · Pretendard (OFL) · Icons: Lucide (ISC) · WebView2 Runtime (Microsoft) · SkiaSharp (MIT)</div>
     <div class="btns"><button class="pill h30 primary" data-b="ok">CLOSE</button></div></div></div>`);
   dlg.addEventListener('click', e => {
     const t = e.target as HTMLElement; const u = (t.closest('[data-url]') as HTMLElement | null)?.dataset.url;
@@ -148,7 +136,7 @@ document.addEventListener('keydown', e => {
   else if (k === 't') { e.preventDefault(); bridge.call('setTheme', { theme: S?.theme === 'dark' ? 'light' : 'dark' }); } else if (k === 'p') { e.preventDefault(); bridge.call('setPlot', { plot: S?.plot === 'dark' ? 'light' : 'dark' }); }
   else if (k === 'd' && e.shiftKey) { e.preventDefault(); bridge.call('setDeveloper', { on: !S?.developer }); }
   else if ((e.key === 'PageDown' || e.key === 'PageUp') && WIN === 0 && S) { e.preventDefault(); const st = S; const i = st.pages.findIndex(p => p.id === st.activePage); const j = e.key === 'PageDown' ? i + 1 : i - 1; if (j >= 0 && j < st.pages.length) bridge.call('page.select', { page: st.pages[j].id }); }
-  else if (k === '1' && WIN === 0) setMode('NAVIGATOR'); else if (k === '2' && WIN === 0) setMode('VIEW'); else if (k === '3' && S?.legacyTabs) setMode('ANALYSIS'); else if (k === '4' && S?.legacyTabs) setMode('REPORT');
+  else if (k === '1' && WIN === 0) setMode('NAVIGATOR'); else if (k === '2' && WIN === 0) setMode('VIEW'); else if (k === '3' && WIN === 0 && S?.files.some(f => f.format === 'MIL1553' || f.format === 'A429')) setMode('MIL1553'); else if (k === '3' && S?.legacyTabs) setMode('ANALYSIS'); else if (k === '4' && S?.legacyTabs) setMode('REPORT');
   else if (k === 'b') { e.preventDefault(); const pv = S ? view.plots.get(S.activeChart) ?? view.plots.values().next().value : undefined; if (pv) bridge.call('setCursorMode', { chart: pv.dto.id, mode: pv.dto.cursorMode === 'band' ? 'free' : 'band' }); }
 });
 
@@ -294,7 +282,8 @@ const test = {
   async mode(m: string) { setMode(m); await new Promise(r => setTimeout(r, 80)); await settle(); return true; },
   // ---- 0.10.0
   m1553() { return m1553.testApi(); },
-  async settings(on: boolean) { showSettings(); const cb = document.querySelector('.settings [data-f=icdExport]') as HTMLInputElement; if (cb.checked !== on) { cb.checked = on; cb.dispatchEvent(new Event('change', { bubbles: true })); } await new Promise(r => setTimeout(r, 120)); await settle(); document.querySelector('.modal-bg')?.remove(); return !!document.querySelector('[data-a=icdImport]') === on; },
+  icd() { return icd.testApi(); },
+  async settings(on: boolean) { if (S) showSettings(S); const cb = document.querySelector('.settings [data-f=icdExport]') as HTMLInputElement; if (cb.checked !== on) { cb.checked = on; cb.dispatchEvent(new Event('change', { bubbles: true })); } await new Promise(r => setTimeout(r, 120)); await settle(); document.querySelector('.modal-bg')?.remove(); return !!document.querySelector('[data-a=icdImport]') === on; },
   frameStats(chart: number) { const pv = this.plot(chart); return pv ? { frames: pv.frames, lastMs: pv.lastTotalMs, engineMs: pv.lastEngineMs, timings: pv.timings.slice(-60).map(t => t.t1 - t.t0) } : null; },
   async reportPage() { await report.refreshPage(); await new Promise(r => setTimeout(r, 100)); return !!report.el.querySelector('img')?.getAttribute('src'); },
   layout() { const g = (sel: string) => { const el = document.querySelector(sel) as HTMLElement | null; if (!el) return null; const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), font: cs.fontSize, bg: cs.backgroundColor, color: cs.color }; }; return { header: g('.hdr'), nav: g('.nav'), center: g('.center'), props: g('.props'), footer: g('.ftr'), chartHead: g('.chart-h'), plot: g('.plot-box'), modes: g('.modes'), search: g('.search'), rowFile: g('.row-file'), rowCh: g('.row-ch'), bigNum: g('.prop-big .num'), led: g('.led-pill') }; },

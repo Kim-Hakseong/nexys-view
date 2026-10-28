@@ -130,6 +130,18 @@ const SECTIONS: { id: string; label: string; html: (app: any) => string }[] = [
     <p>차트 메뉴(⋯) → <b>상세 차트 연결</b>(또는 PROPERTIES의 LINK DETAIL). 개요 차트 아래에 상세 차트가 생기고 밴드 구간만 확대해서 보여줍니다. 밴드를 움직이면 상세의 X범위가 바로 따라오고, 상세에서 줌·팬하면 개요의 밴드가 따라갑니다. 상세에 보일 채널은 개요 범례 클릭, PROPERTIES의 SHOW IN DETAIL, 또는 상세 차트에 채널 드롭으로 바꿉니다.</p>
     <h4>X축 링크</h4>
     <p>같은 X채널(또는 같은 파일·단위)을 쓰는 차트는 기본으로 팬·줌이 함께 움직입니다. 헤더의 <b>LINK</b> 알약으로 차트별로 끌 수 있고, 링크된 차트에는 개요의 밴드가 연한 점선으로 표시됩니다.</p>` },
+  { id: 'bus', label: 'BUS (1553 · 429)', html: () => `
+    <h3>BUS — MIL-STD-1553 / ARINC 429 캡처</h3>
+    <p><code>.mon</code> 캡처를 열면 툴바에 <b>BUS</b>가 생겨요(<kbd>Ctrl+3</kbd>). 파일이 없으면 빈 화면에서 내장 샘플(1553 20,000건 · 429 2,000건)을 바로 열 수 있습니다.</p>
+    <h4>메시지 리스트</h4><p>100만 건도 그대로 스크롤되고, 열 머리글을 누르면 정렬, <b>COLUMNS</b>로 열을 고릅니다. TIME은 상대 초 / 절대 µs / 이전 행과의 Δ로 바꿀 수 있고(설정에도 있음), 오류가 있는 행은 배경 톤으로 표시됩니다.</p>
+    <h4>필터</h4><p>RT·SA 숫자, T/R, 버스 A/B, ERRORS ONLY, TEXT(데이터 hex·ICD 이름·"RT3" 같은 텍스트)를 조합하고 PRESET → SAVE로 조합을 저장합니다. 429는 LABEL(옥탈)·SDI·SSM·패리티 오류.</p>
+    <h4>디코드·추이</h4><p>행을 고르면 명령어·상태어·오류·활동 비트와 데이터 워드(hex·bit·10진)가 보여요. ICD가 있으면 워드 이름과 EU 값이 함께 나오고(ICD 버튼으로 적용/해제), 워드의 ▸ trend 또는 <kbd>Enter</kbd>로 추이 차트를 그립니다. STATS는 메시지 수·RT별 분포·오류·버스 로드(근사), CSV / CSV·EU는 현재 목록과 디코드 결과를 내보냅니다.</p>
+    <table class="help-keys">${[['행 이동', '↑ ↓ · PgUp PgDn · Home End'], ['첫 ICD 워드 추이', 'Enter'], ['선택 행 복사', 'Ctrl + C'], ['BUS 모드', 'Ctrl + 3']].map(r => `<tr><td>${r[0]}</td><td><kbd>${r[1]}</kbd></td></tr>`).join('')}</table>` },
+  { id: 'icd', label: 'ICD 모듈', html: () => `
+    <h3>ICD 모듈</h3><p>설정에서 <b>ICD export module</b>을 켜면 툴바에 ICD / EXPORT 버튼이 생깁니다. ICD 허브는 메시지(RT·SA·T/R·WC·주기·버스)와 워드(워드 번호·비트 시작·길이·타입·scale·offset·단위)의 작은 JSON(스키마 1.0)입니다.</p>
+    <h4>IMPORT</h4><p>CSV·XLSX(첫 시트)는 워드당 1행. 열 이름을 자동으로 알아보고(message·rt·sa·tr·wc·period_ms·bus·word·bit_start·bit_len·type·scale·offset·unit·name), 못 알아본 열은 직접 고릅니다. 허브 JSON과 메시지 XML은 바로 열립니다.</p>
+    <h4>EDIT</h4><p>메시지·워드 표에서 바로 고치고 추가·삭제합니다. RT·SA 0~31, WC 1~32, 비트 범위 겹침은 아래 메시지로 알려 줍니다(error는 내보내기를 막고 warning은 막지 않음).</p>
+    <h4>EXPORT</h4><p>시뮬레이터 프로젝트(설정에서 템플릿 프로젝트 폴더 지정) · 메시지 XML · 커스텀 디바이스 XML · 자동화 스크립트(시뮬레이터 COM 감지 시). 미리보기에서 생성될 메시지·필드를 확인하고, XML은 내보낼 때 스키마 검사와 재판독 비교를 거칩니다.</p>` },
   { id: 'analysis', label: '분석', html: () => `
     <h3>ANALYSIS — 계산</h3><p>함수를 고르고 입력 채널을 정한 뒤 <b>RUN</b>. 결과 채널은 <b>SHOW IN VIEW</b>로 바로 차트가 됩니다.</p>
     <div class="help-card"><b>Statistics</b><p>min / max / mean / RMS / 표준편차 등 요약 통계.</p></div>
@@ -148,7 +160,7 @@ const SECTIONS: { id: string; label: string; html: (app: any) => string }[] = [
     <table class="help-table"><tr><td>CSV / TDMS</td><td>차트 메뉴(⋯) 또는 PROPERTIES → EXPORT. 밴드가 있으면 밴드 구간만, 없으면 전체. 차트의 채널 전부.</td></tr><tr><td>차트 PNG</td><td>PNG COPY(클립보드) / PNG…(파일)</td></tr><tr><td>모든 채널 TDMS</td><td>헤더 SAVE (<kbd>Ctrl+S</kbd>)</td></tr></table>` },
   { id: 'keys', label: '단축키', html: () => `
     <h3>키보드 단축키</h3><p>마우스 없이도 빠르게 쓸 수 있어요.</p>
-    <table class="help-keys">${[['열기', 'Ctrl + O'], ['DataPlugin으로 열기', 'Ctrl + Shift + O'], ['모든 채널 TDMS로 저장', 'Ctrl + S'], ['NAVIGATOR / VIEW', 'Ctrl + 1 · 2'], ['페이지 이동', 'Ctrl + PageDown / PageUp'], ['밴드 커서 ↔ 자유 커서', 'Ctrl + B'], ['줌 되돌리기 (20단계)', 'Backspace'], ['밴드 1 px / 10 px 이동', '← → / Shift + ← →'], ['테이블 선택 복사', 'Ctrl + C'], ['Undo / Redo', 'Ctrl + Z / Ctrl + Y'], ['테마 / 플롯 밝기 / 개발자 정보', 'Ctrl + T / Ctrl + P / Ctrl + Shift + D'], ['도움말 / 투어 닫기', 'F1 / Esc']].map(([a, b]) => `<tr><td>${a}</td><td><kbd>${b}</kbd></td></tr>`).join('')}</table>
+    <table class="help-keys">${[['열기', 'Ctrl + O'], ['DataPlugin으로 열기', 'Ctrl + Shift + O'], ['모든 채널 TDMS로 저장', 'Ctrl + S'], ['NAVIGATOR / VIEW / BUS', 'Ctrl + 1 · 2 · 3'], ['페이지 이동', 'Ctrl + PageDown / PageUp'], ['밴드 커서 ↔ 자유 커서', 'Ctrl + B'], ['줌 되돌리기 (20단계)', 'Backspace'], ['밴드 1 px / 10 px 이동', '← → / Shift + ← →'], ['테이블 선택 복사', 'Ctrl + C'], ['Undo / Redo', 'Ctrl + Z / Ctrl + Y'], ['테마 / 플롯 밝기 / 개발자 정보', 'Ctrl + T / Ctrl + P / Ctrl + Shift + D'], ['도움말 / 투어 닫기', 'F1 / Esc']].map(([a, b]) => `<tr><td>${a}</td><td><kbd>${b}</kbd></td></tr>`).join('')}</table>
     <div class="help-note">차트 위: 휠 줌 · 드래그 이동 · <b>오른쪽 드래그 영역 확대</b>(<kbd>Shift</kbd> = X만, <kbd>Ctrl</kbd> = Y만) · 더블클릭 전체 · 클릭 커서 A · <kbd>Shift</kbd>+클릭 커서 B · 우클릭 커서 해제</div>` },
   { id: 'tips', label: '활용 팁', html: () => `
     <h3>활용 팁</h3>

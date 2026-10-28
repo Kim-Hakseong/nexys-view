@@ -2,8 +2,4 @@
   <PropertyGroup>
     <RootNamespace>NexysView.Core</RootNamespace>
   </PropertyGroup>
-  <ItemGroup Condition="'$(DxdAvailable)' == 'true'">
-    <!-- optional .dxd reader (sibling project, not part of this repository) -->
-    <ProjectReference Include="..\..\..\dxd\app\MiniMeas.Core\MiniMeas.Core.csproj" />
-  </ItemGroup>
 </Project>

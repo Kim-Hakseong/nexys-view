@@ -49,9 +49,7 @@ public sealed class AppState
         {
             ".tdms" => TdmsDataSource.Open(path),
             ".tdm" => Core.Tdm.TdmFile.OpenDataFile(path),
-#if DXD
-            ".dxd" => Import.DxdDataSource.Open(path),
-#endif
+            ".dxd" => Core.Dxd.DxdDataSource.Open(path),
             ".csv" or ".txt" or ".xyz" => Import.CsvDataSource.Open(path),
             ".mon" => Core.Mil1553.Mil1553DataSource.Open(path),
             _ => throw new NotSupportedException("Unsupported file type: " + Path.GetExtension(path)),

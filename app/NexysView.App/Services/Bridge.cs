@@ -128,16 +128,33 @@ public sealed class Bridge
         switch (cmd)
         {
             case "state": _sentFilesVersion = _e.FilesVersion; return _e.Snapshot(true);
-            // 0.10.0: MIL-STD-1553 view + ICD module
+            // 0.10.0 / 1.0: bus capture view (MIL-STD-1553, ARINC 429) + ICD module
             case "m1553.rows": return _e.Mil1553.Rows(I(r, "first"), I(r, "count", 200));
-            case "m1553.filter": _e.Mil1553.SetFilter(I(r, "rt", -1), I(r, "sa", -1), I(r, "tr", -1), I(r, "bus", -1), B(r, "errorsOnly")); return _e.Mil1553.RowCount;
+            case "m1553.filter": _e.Mil1553.SetFilter(I(r, "rt", -1), I(r, "sa", -1), I(r, "tr", -1), I(r, "bus", -1), B(r, "errorsOnly"), S(r, "text"), I(r, "label", -1), I(r, "sdi", -1), I(r, "ssm", -1), B(r, "parityOnly")); return _e.Mil1553.RowCount;
             case "m1553.decode": return _e.Mil1553.Decode(I(r, "i", -1));
             case "m1553.file": _e.Mil1553.SelectFile(S(r, "name") is { Length: > 0 } mf ? mf : null); return null;
             case "m1553.chart": { var c = _e.Charts.FirstOrDefault(c => c.PageId == 0 && c.WindowId == 0) ?? _e.AddChart(record: false, pageId: 0); return c.Id; }
+            case "m1553.stats": return _e.Mil1553.Stats();
+            case "m1553.sort": return _e.Mil1553.SetSort(S(r, "col"), I(r, "dir", 1));
+            case "m1553.rowOf": return _e.Mil1553.RowOf(I(r, "i", -1));
+            case "m1553.preset.save": { var p = new Mil1553Service.FilterPreset { Name = S(r, "name"), Rt = I(r, "rt", -1), Sa = I(r, "sa", -1), Tr = I(r, "tr", -1), Bus = I(r, "bus", -1), ErrorsOnly = B(r, "errorsOnly"), Text = S(r, "text") }; _e.Mil1553.Presets.RemoveAll(x => x.Name == p.Name); _e.Mil1553.Presets.Add(p); _e.Touch(); return null; }
+            case "m1553.preset.delete": _e.Mil1553.Presets.RemoveAll(x => x.Name == S(r, "name")); _e.Touch(); return null;
+            case "m1553.busTime": _e.BusTime = S(r, "mode", "rel") is "abs" or "delta" ? S(r, "mode") : "rel"; _e.Touch(); return null;
+            case "m1553.openSample": { string? p = S(r, "protocol") == "A429" ? SampleBus.Ensure429() : SampleBus.Ensure1553(); if (p != null) { _e.OpenFile(p); _e.Mode = "MIL1553"; _e.Touch(); } return p; }
+            case "m1553.exportRowsTo": return _e.Mil1553.ExportRowsCsv(S(r, "path"), I(r, "first", 0), I(r, "last", int.MaxValue));
+            case "m1553.exportDecodedTo": return _e.Mil1553.ExportDecodedCsv(S(r, "path"), I(r, "first", 0), I(r, "last", int.MaxValue));
             case "setFeature": if (S(r, "name") == "icdExport") _e.IcdExport = B(r, "on"); if (S(r, "name") == "icdTemplateDir") _e.IcdTemplateDir = S(r, "value").Trim(); _e.Touch(); return null;
             case "icd.load": return _e.Mil1553.LoadIcd(S(r, "path"));
             case "icd.dummy": _e.Mil1553.LoadDummyIcd(); return null;
-            case "icd.export": return _e.Mil1553.Export(S(r, "dir"), S(r, "template") is { Length: > 0 } td ? td : null, B(r, "rt"));
+            case "icd.new": _e.Mil1553.NewHub(); return null;
+            case "icd.apply": _e.Mil1553.ApplyIcd(B(r, "on", true)); return null;
+            case "icd.hub": return _e.Mil1553.HubDto();
+            case "icd.edit": return _e.Mil1553.Edit(r);
+            case "icd.preview": return _e.Mil1553.Preview(S(r, "path"));
+            case "icd.importMapped": { var map = new Dictionary<string, int>(); if (r.TryGetProperty("mapping", out var mp) && mp.ValueKind == JsonValueKind.Object) foreach (var kv in mp.EnumerateObject()) if (kv.Value.ValueKind == JsonValueKind.Number) map[kv.Name] = kv.Value.GetInt32(); return _e.Mil1553.ImportMapped(S(r, "path"), map); }
+            case "icd.saveTo": return _e.Mil1553.SaveHub(S(r, "path"));
+            case "icd.exportPreview": return _e.Mil1553.ExportPreview();
+            case "icd.export": return _e.Mil1553.Export(S(r, "dir"), S(r, "template") is { Length: > 0 } td ? td : null, B(r, "rt", true), SL(r, "formats") is { Count: > 0 } fm ? fm.ToArray() : null);
             case "open": foreach (var p in SL(r, "paths")) _e.OpenFile(p); return null;
             case "openWithPlugin": foreach (var p in SL(r, "paths")) _e.OpenWithPlugin(p, S(r, "plugin")); return null;
             case "closeFile": _e.CloseFile(S(r, "name")); return null;

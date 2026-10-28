@@ -22,8 +22,14 @@ public static class Mil1553DataSource
         }
     }
 
+    public const string Format429 = "A429";
+    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<DataFile, Arinc429File> _files429 = new();
+    public static Arinc429File? FileOf429(DataFile df) => _files429.TryGetValue(df, out var f) ? f : null;
+    public static void DetachIcd(DataFile df) { if (df.Groups.RemoveAll(g => g.Name.StartsWith("ICD:", StringComparison.Ordinal)) > 0) { } }
+
     public static DataFile Open(string path)
     {
+        if (Arinc429File.Looks429(path)) return Open429(path);
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var f = new Mil1553File(path);
         var props = new Dictionary<string, object> { ["records"] = f.Count, ["record_bytes"] = Mil1553File.RecordSize, ["metadata_bytes"] = f.Metadata.Length };
@@ -81,6 +87,34 @@ public static class Mil1553DataSource
             }
         }
         return added;
+    }
+
+    sealed class Col429 : IValueSource
+    {
+        readonly Arinc429File _f; readonly Func<Arinc429File, int, double> _get;
+        public Col429(Arinc429File f, Func<Arinc429File, int, double> get) { _f = f; _get = get; }
+        public long Length => _f.Count;
+        public int Read(long first, Span<double> dst) { long n = Math.Min(dst.Length, Length - first); if (n <= 0) return 0; for (int k = 0; k < n; k++) dst[k] = _get(_f, (int)(first + k)); return (int)n; }
+    }
+
+    static DataFile Open429(string path)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var f = new Arinc429File(path);
+        var props = new Dictionary<string, object> { ["records"] = f.Count, ["record_bytes"] = Arinc429File.RecordSize, ["metadata_bytes"] = f.Metadata.Length };
+        var df = new DataFile(path, Format429, props, null); _files429.Add(df, f);
+        var g = new ChannelGroup("A429", new Dictionary<string, object> { ["bus"] = "ARINC 429" }); df.Groups.Add(g);
+        double t0 = f.Count > 0 ? f.TimeUs[0] : 0;
+        var time = Ch(df, g, "time", new Col429(f, (x, i) => (x.TimeUs[i] - t0) * 1e-6), "s", "time since first word"); time.XKind = XKind.Index;
+        void add(string name, Func<Arinc429File, int, double> get, string unit, string desc) { var c = Ch(df, g, name, new Col429(f, get), unit, desc); c.XKind = XKind.Explicit; c.XChannel = time; c.XUnit = "s"; c.DataType = "U32"; }
+        add("label", (x, i) => x.Get(i).Label, "", "label (decimal; octal in the list)");
+        add("sdi", (x, i) => x.Get(i).Sdi, "", "source/destination identifier (bits 9-10)");
+        add("data", (x, i) => x.Get(i).Data, "", "data field bits 11-29 (raw)");
+        add("bnr", (x, i) => { int d = x.Get(i).Data; return (d & 0x40000) != 0 ? d - 0x80000 : d; }, "", "data field as signed BNR");
+        add("ssm", (x, i) => x.Get(i).Ssm, "", "sign/status matrix (bits 30-31)");
+        add("parity_ok", (x, i) => x.Get(i).ParityOk ? 1 : 0, "", "odd parity check");
+        add("word", (x, i) => x.Word[i], "", "raw 32-bit word");
+        df.OpenTime = sw.Elapsed; return df;
     }
 
     static Channel Ch(DataFile df, ChannelGroup g, string name, IValueSource src, string unit, string desc)

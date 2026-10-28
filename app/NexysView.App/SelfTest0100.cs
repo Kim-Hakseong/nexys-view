@@ -27,7 +27,8 @@ public static partial class SelfTest
         var sine = dfs.AllChannels.First(c => c.Name == "Sine 1 Hz");
         await JS(w, $"await nx.test.drop([{{id:{J(sine.Id)},name:'s'}}]); return true;");
         GB("regression_tdms_chart", e.Charts.Any(c => c.Model.Curves.Count > 0), $"charts={e.Charts.Count}");
-        // ---- 1) open 1M records
+        // ---- 1) open 1M records (memory before / after the 1553 path: R1 split measurement)
+        G("memory_ws_before_1553_mb", WsMb(), "MB");
         var t0 = Stopwatch.StartNew(); var df = e.OpenFile(mon1m)!; double openMs = t0.Elapsed.TotalMilliseconds;
         var cap = Mil1553DataSource.FileOf(df)!;
         G("m1553_open_1M_ms", openMs, "ms", "<=1000"); G("m1553_records", cap.Count, "", "=1000000");
@@ -47,9 +48,10 @@ public static partial class SelfTest
         }
         await JS(w, "await nx.test.settle(); return true;");
         string modes = (await JS(w, "return Array.from(document.querySelectorAll('.tools-modes .tool.mode')).map(b => b.textContent.trim()).join(',');")).ToString();
-        GB("m1553_mode_button", modes.Contains("MIL1553"), modes);
+        GB("m1553_mode_button", modes.Contains("MIL1553") || modes.Contains("BUS"), modes);   // 1.0: the mode is labelled BUS
         await JS(w, "await nx.test.mode('MIL1553'); return true;");
         await Idle(w, 300);
+        G("memory_ws_after_1553_mb", WsMb(), "MB");
         int total = (await JS(w, "return nx.test.m1553().total();")).GetInt32();
         GB("m1553_list_total", total == 1_000_000, $"total={total}");
         int vis = (await JS(w, "return await nx.test.m1553().scrollTo(500000);")).GetInt32();

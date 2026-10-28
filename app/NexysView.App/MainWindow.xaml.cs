@@ -142,20 +142,43 @@ public partial class MainWindow : Window
                     CloseChartWindow(id); return null;
                 }
             case "window.list": return Windows.Values.Select(w => new { id = w.Id, title = w.Title, x = w.Rect.X, y = w.Rect.Y, w = w.Rect.Width, h = w.Rect.Height }).ToList();
-            case "icd.importDialog":
+            case "icd.pickFile":   // returns a path (the page then previews / maps the columns)
                 {
-                    var dlg = new OpenFileDialog { Title = "ICD (CSV or hub JSON)", Filter = "ICD|*.csv;*.json|CSV|*.csv|Hub JSON|*.json|All|*.*" };
-                    if (dlg.ShowDialog(this) == true) return Engine.Mil1553.LoadIcd(dlg.FileName);
-                    return null;
+                    var dlg = new OpenFileDialog { Title = "ICD (CSV, XLSX, hub JSON or message XML)", Filter = "ICD|*.csv;*.xlsx;*.json;*.xml|CSV|*.csv|Excel|*.xlsx|Hub JSON|*.json|Message XML|*.xml|All|*.*" };
+                    return dlg.ShowDialog(this) == true ? dlg.FileName : null;
+                }
+            case "icd.saveDialog":
+                {
+                    if (Engine.Mil1553.Hub == null) return null;
+                    var dlg = new SaveFileDialog { Title = "Save ICD hub", Filter = "Hub JSON|*.json|CSV|*.csv", FileName = "icd_hub.json" };
+                    if (dlg.ShowDialog(this) != true) return null;
+                    if (dlg.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) { File.WriteAllText(dlg.FileName, Engine.Mil1553.Hub.ToCsv()); return dlg.FileName; }
+                    return Engine.Mil1553.SaveHub(dlg.FileName);
+                }
+            case "icd.pickTemplate":   // the template project is a folder: let the user pick its project file
+                {
+                    var dlg = new OpenFileDialog { Title = "Template project (pick the .CPJ in the template folder)", Filter = "Project|*.CPJ|All|*.*" };
+                    if (dlg.ShowDialog(this) != true) return null;
+                    Engine.IcdTemplateDir = System.IO.Path.GetDirectoryName(dlg.FileName) ?? ""; Engine.Touch(); return Engine.IcdTemplateDir;
                 }
             case "icd.exportDialog":
                 {
                     if (Engine.Mil1553.Hub == null) { Engine.SetStatus("Load an ICD first (ICD import)"); return null; }
-                    var dlg = new SaveFileDialog { Title = "Export project folder (choose the folder name)", Filter = "Project folder|*.folder", FileName = "IcdProject.folder" };
+                    var dlg = new SaveFileDialog { Title = "Export folder (choose the folder name)", Filter = "Export folder|*.folder", FileName = "IcdExport.folder" };
                     if (dlg.ShowDialog(this) != true) return null;
                     string dir = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dlg.FileName)!, System.IO.Path.GetFileNameWithoutExtension(dlg.FileName));
-                    return Engine.Mil1553.Export(dir, null, true);
+                    var fm = args.TryGetProperty("formats", out var fe) && fe.ValueKind == JsonValueKind.Array ? fe.EnumerateArray().Select(x => x.GetString() ?? "").ToArray() : null;
+                    return Engine.Mil1553.Export(dir, null, true, fm);
                 }
+            case "m1553.exportCsvDialog":
+                {
+                    bool decoded = args.TryGetProperty("decoded", out var dd) && dd.ValueKind == JsonValueKind.True;
+                    var dlg = new SaveFileDialog { Filter = "CSV|*.csv", FileName = decoded ? "bus_decoded.csv" : "bus_rows.csv" };
+                    if (dlg.ShowDialog(this) != true) return null;
+                    int first = args.TryGetProperty("first", out var f0) ? f0.GetInt32() : 0, last = args.TryGetProperty("last", out var l0) ? l0.GetInt32() : int.MaxValue;
+                    return decoded ? Engine.Mil1553.ExportDecodedCsv(dlg.FileName, first, last) : Engine.Mil1553.ExportRowsCsv(dlg.FileName, first, last);
+                }
+            case "openProfileFolder": { var dir = System.IO.Path.GetDirectoryName(LayoutStore.PathFor())!; Directory.CreateDirectory(dir); System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true }); return dir; }
             case "openDialog":
                 {
                     var dlg = new OpenFileDialog { Filter = "Measurement data|*.tdms;*.tdm;*.dxd;*.csv;*.txt;*.xyz;*.mon;*.tdv|TDMS|*.tdms|TDM|*.tdm|DXD|*.dxd|CSV|*.csv;*.txt|MIL-STD-1553 capture|*.mon|VIEW layout|*.tdv|All|*.*", Multiselect = true };
@@ -244,9 +267,10 @@ public partial class MainWindow : Window
 public static class AppInfo
 {
     public static string Version { get; } = (typeof(AppInfo).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).FirstOrDefault() as System.Reflection.AssemblyInformationalVersionAttribute)?.InformationalVersion.Split('+')[0] ?? "0.9.4-beta";
-    public static bool IsBeta => Version.Contains("beta", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Pre-release (beta or release candidate): the about dialog shows the feedback notice.</summary>
+    public static bool IsBeta => Version.Contains("beta", StringComparison.OrdinalIgnoreCase) || Version.Contains("-rc", StringComparison.OrdinalIgnoreCase);
     /// <summary>"0.9.0 beta"</summary>
-    public static string VersionText => Version.Replace("-beta", " beta");
+    public static string VersionText => Version.Replace("-beta", " beta").Replace("-rc", " rc");
     public const string Repo = "https://github.com/Kim-Hakseong/nexys-view";
     public const string Issues = Repo + "/issues";
 }

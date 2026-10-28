@@ -14,4 +14,7 @@
     <ProjectReference Include="..\NexysView.Render\NexysView.Render.csproj" />
     <ProjectReference Include="..\NexysView.App\NexysView.App.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="data\dxd\*" CopyToOutputDirectory="PreserveNewest" LinkBase="data\dxd" />
+  </ItemGroup>
 </Project>

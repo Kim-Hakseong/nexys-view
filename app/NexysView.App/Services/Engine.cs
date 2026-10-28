@@ -62,6 +62,8 @@ public sealed class Engine
     public bool IcdExport { get; set; }
     /// <summary>Folder of a bus-simulator template project (one .CPJ + the 1553 device .CDV) cloned by the ICD export; empty = file export off.</summary>
     public string IcdTemplateDir { get; set; } = "";
+    /// <summary>1.0: bus list time display — rel (seconds since first record), abs (µs time tag), delta (to previous row).</summary>
+    public string BusTime { get; set; } = "rel";
     public Mil1553Service Mil1553 { get; }
     /// <summary>Channel groups were added/removed outside AppState.Open (ICD attach): resend the file tree.</summary>
     public void FilesChangedExternally() { _fileDto.Clear(); FilesVersion++; Changed?.Invoke(); }
@@ -700,7 +702,7 @@ public sealed class Engine
         return new
         {
             theme = Theme, plot = Plot, mode = Mode, developer = Developer, legacyTabs = ShowLegacyTabs, dropMode = DropMode,
-            features = new { icdExport = IcdExport }, mil1553 = Mil1553.Dto(),
+            features = new { icdExport = IcdExport }, mil1553 = Mil1553.Dto(), busTime = BusTime,
             pages = Pages.Select(p => new { id = p.Id, name = p.Name, columns = p.Columns, charts = Charts.Count(c => c.PageId == p.Id && c.WindowId == 0) }).ToList(), activePage = ActivePage, autoPage = new { on = AutoPage, n = AutoPageN },
             windows = Windows.Select(kv => new { id = kv.Key, title = kv.Value, charts = Charts.Count(c => c.WindowId == kv.Key) }).ToList(),
             app = new { version = AppInfo.Version, versionText = AppInfo.VersionText, beta = AppInfo.IsBeta, repo = AppInfo.Repo, issues = AppInfo.Issues, tourSeen = TourSeen, automation = SelfTest.Enabled },
