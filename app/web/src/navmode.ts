@@ -1,8 +1,8 @@
 // NAVIGATOR mode center: DATA SOURCES (mockup navigator.html) — actions, file cards, 3 summary stats.
-import { bridge } from './bridge';
-import { I } from './icons';
-import { State } from './types';
-import { esc, fmtBytes, fmtInt, h } from './util';
+import { bridge } from '@core/bridge';
+import { I } from '@core/icons';
+import { State } from '@core/types';
+import { esc, fmtBytes, fmtInt, h } from '@core/util';
 
 export class NavMode {
   el: HTMLElement; private body: HTMLElement; private meta: HTMLElement; private S: State | null = null;

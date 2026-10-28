@@ -2,7 +2,8 @@
   "compilerOptions": {
     "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "strict": true, "noEmit": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"], "skipLibCheck": true, "esModuleInterop": true, "isolatedModules": true, "useDefineForClassFields": true,
-    "noUnusedLocals": false, "types": []
+    "noUnusedLocals": false, "types": [],
+    "baseUrl": ".", "paths": { "@core/*": ["../core/NexysView.Web/src/*"] }
   },
-  "include": ["src"]
+  "include": ["src", "../core/NexysView.Web/src"]
 }

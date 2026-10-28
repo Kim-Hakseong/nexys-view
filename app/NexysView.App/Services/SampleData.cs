@@ -11,9 +11,7 @@ public static class SampleData
     public const int Revision = 1;
     public const string FileName = "Sample.tdms";
 
-    public static string Dir => Path.Combine(
-        Program.Fresh || SelfTest.Enabled ? Path.GetTempPath() : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "NexysView", "sample");
+    public static string Dir => AppPaths.SampleDir;
 
     /// <summary>Path of the sample file, writing it if missing or outdated; null if it could not be written.</summary>
     public static string? Ensure()

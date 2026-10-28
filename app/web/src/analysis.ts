@@ -1,9 +1,9 @@
 // ANALYSIS: FUNCTIONS list (240px) · result card (header, preview plot, 4 stats, result channels) · PARAMETERS (300px).
-import { bridge } from './bridge';
-import { I } from './icons';
-import { PlotView } from './plot';
-import { AnalysisDto, State } from './types';
-import { curveColor, esc, fmtInt, fmtValue, h } from './util';
+import { bridge } from '@core/bridge';
+import { I } from '@core/icons';
+import { PlotView } from '@core/plot';
+import { AnalysisDto, State } from '@core/types';
+import { curveColor, esc, fmtInt, fmtValue, h } from '@core/util';
 
 const DESC: Record<string, string> = { Statistics: 'count · min · max · mean · RMS · std · sum', FFT: 'amplitude spectrum', 'IIR low-pass': 'Biquad · low-pass', 'IIR high-pass': 'Biquad · high-pass', 'FIR low-pass': 'windowed-sinc', Derivative: 'd/dt', Integral: '∫ dt', Resample: 'linear', 'Formula channel': 'calculator syntax' };
 

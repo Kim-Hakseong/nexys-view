@@ -59,21 +59,7 @@ public partial class MainWindow : Window
     /// <summary>Close a chart window from the engine side (last chart returned, tests).</summary>
     public void CloseChartWindow(int id) { if (Windows.TryGetValue(id, out var w)) { w.Returning = true; SavedWindowRects[id] = w.Rect; Windows.Remove(id); Engine.CloseWindow(id); w.Close(); } }
 
-    public static void ConfigureCore(CoreWebView2 core)
-    {
-        core.Settings.AreDefaultContextMenusEnabled = false;
-        core.Settings.AreBrowserAcceleratorKeysEnabled = false;
-        core.Settings.IsStatusBarEnabled = false;
-        core.Settings.IsZoomControlEnabled = false;
-        core.Settings.IsPinchZoomEnabled = false;
-        core.Settings.AreDevToolsEnabled = true;
-        core.Settings.IsGeneralAutofillEnabled = false;
-        core.Settings.IsPasswordAutosaveEnabled = false;
-        core.SetVirtualHostNameToFolderMapping("app.nexys", WwwRoot, CoreWebView2HostResourceAccessKind.Allow);
-        core.NewWindowRequested += (_, e) => e.Handled = true;
-        core.ProcessFailed += (_, e) => Diag.Trace($"webview process failed: {e.ProcessFailedKind} {e.Reason}");
-    }
-
+    public static void ConfigureCore(CoreWebView2 core) => WebShell.ConfigureCore(core);
     public MainWindow()
     {
         InitializeComponent();
@@ -109,7 +95,7 @@ public partial class MainWindow : Window
             var core = Web.CoreWebView2;
             if (!Directory.Exists(WwwRoot)) { Boot.Text = "wwwroot missing — run `npm run build` in app/web and rebuild"; Diag.Trace("wwwroot missing: " + WwwRoot); }
             ConfigureCore(core);
-            Bridge = new Bridge(core, env, Engine, Dispatcher, HostCommand);
+            Bridge = new Bridge(core, env, Engine, Dispatcher, HostCommand, AppDispatch);
             Bridge.Ready += () => { Diag.Trace("page ready"); Dispatcher.BeginInvoke(() => { LayoutStore.Load(this); Bridge.PushSnapshot(); _ready.TrySetResult(); }); };
             core.Navigate("https://app.nexys/index.html");
             Diag.Trace("webview2 " + env.BrowserVersionString + " navigating");
@@ -142,46 +128,9 @@ public partial class MainWindow : Window
                     CloseChartWindow(id); return null;
                 }
             case "window.list": return Windows.Values.Select(w => new { id = w.Id, title = w.Title, x = w.Rect.X, y = w.Rect.Y, w = w.Rect.Width, h = w.Rect.Height }).ToList();
-            case "icd.pickFile":   // returns a path (the page then previews / maps the columns)
-                {
-                    var dlg = new OpenFileDialog { Title = "ICD (CSV, XLSX, hub JSON or message XML)", Filter = "ICD|*.csv;*.xlsx;*.json;*.xml|CSV|*.csv|Excel|*.xlsx|Hub JSON|*.json|Message XML|*.xml|All|*.*" };
-                    return dlg.ShowDialog(this) == true ? dlg.FileName : null;
-                }
-            case "icd.saveDialog":
-                {
-                    if (Engine.Mil1553.Hub == null) return null;
-                    var dlg = new SaveFileDialog { Title = "Save ICD hub", Filter = "Hub JSON|*.json|CSV|*.csv", FileName = "icd_hub.json" };
-                    if (dlg.ShowDialog(this) != true) return null;
-                    if (dlg.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) { File.WriteAllText(dlg.FileName, Engine.Mil1553.Hub.ToCsv()); return dlg.FileName; }
-                    return Engine.Mil1553.SaveHub(dlg.FileName);
-                }
-            case "icd.pickTemplate":   // the template project is a folder: let the user pick its project file
-                {
-                    var dlg = new OpenFileDialog { Title = "Template project (pick the .CPJ in the template folder)", Filter = "Project|*.CPJ|All|*.*" };
-                    if (dlg.ShowDialog(this) != true) return null;
-                    Engine.IcdTemplateDir = System.IO.Path.GetDirectoryName(dlg.FileName) ?? ""; Engine.Touch(); return Engine.IcdTemplateDir;
-                }
-            case "icd.exportDialog":
-                {
-                    if (Engine.Mil1553.Hub == null) { Engine.SetStatus("Load an ICD first (ICD import)"); return null; }
-                    var dlg = new SaveFileDialog { Title = "Export folder (choose the folder name)", Filter = "Export folder|*.folder", FileName = "IcdExport.folder" };
-                    if (dlg.ShowDialog(this) != true) return null;
-                    string dir = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dlg.FileName)!, System.IO.Path.GetFileNameWithoutExtension(dlg.FileName));
-                    var fm = args.TryGetProperty("formats", out var fe) && fe.ValueKind == JsonValueKind.Array ? fe.EnumerateArray().Select(x => x.GetString() ?? "").ToArray() : null;
-                    return Engine.Mil1553.Export(dir, null, true, fm);
-                }
-            case "m1553.exportCsvDialog":
-                {
-                    bool decoded = args.TryGetProperty("decoded", out var dd) && dd.ValueKind == JsonValueKind.True;
-                    var dlg = new SaveFileDialog { Filter = "CSV|*.csv", FileName = decoded ? "bus_decoded.csv" : "bus_rows.csv" };
-                    if (dlg.ShowDialog(this) != true) return null;
-                    int first = args.TryGetProperty("first", out var f0) ? f0.GetInt32() : 0, last = args.TryGetProperty("last", out var l0) ? l0.GetInt32() : int.MaxValue;
-                    return decoded ? Engine.Mil1553.ExportDecodedCsv(dlg.FileName, first, last) : Engine.Mil1553.ExportRowsCsv(dlg.FileName, first, last);
-                }
-            case "openProfileFolder": { var dir = System.IO.Path.GetDirectoryName(LayoutStore.PathFor())!; Directory.CreateDirectory(dir); System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", dir) { UseShellExecute = true }); return dir; }
             case "openDialog":
                 {
-                    var dlg = new OpenFileDialog { Filter = "Measurement data|*.tdms;*.tdm;*.dxd;*.csv;*.txt;*.xyz;*.mon;*.tdv|TDMS|*.tdms|TDM|*.tdm|DXD|*.dxd|CSV|*.csv;*.txt|MIL-STD-1553 capture|*.mon|VIEW layout|*.tdv|All|*.*", Multiselect = true };
+                    var dlg = new OpenFileDialog { Filter = "Measurement data|*.tdms;*.tdm;*.dxd;*.csv;*.txt;*.xyz;*.tdv|TDMS|*.tdms|TDM|*.tdm|DXD|*.dxd|CSV|*.csv;*.txt|VIEW layout|*.tdv|All|*.*", Multiselect = true };
                     if (dlg.ShowDialog(this) == true) foreach (var f in dlg.FileNames) Engine.OpenFile(f);
                     return null;
                 }
@@ -224,33 +173,45 @@ public partial class MainWindow : Window
                     string path = dlg.FileName;
                     try { return await Task.Run(() => Engine.ExportRange(path, tdms, ids, chart, x0, x1)); } catch (Exception ex) { Engine.SetStatus("Export failed: " + ex.Message); return null; }
                 }
-            case "png.save":
+            case "openInBus":   // 1.0.0-rc.2: hand a bus capture to NexysBus (next to the exe, the user's install folder, Program Files), else the release page
                 {
-                    var dlg = new SaveFileDialog { Filter = "PNG|*.png", FileName = (args.TryGetProperty("name", out var nm) ? nm.GetString() : null) ?? "chart.png" };
-                    if (dlg.ShowDialog(this) != true) return null;
-                    File.WriteAllBytes(dlg.FileName, PngBytes(args)); Engine.SetStatus("Saved " + dlg.FileName); return dlg.FileName;
-                }
-            case "png.saveTo": { string path = args.GetProperty("path").GetString()!; File.WriteAllBytes(path, PngBytes(args)); return path; }
-            case "png.copy":
-                {
-                    using var ms = new MemoryStream(PngBytes(args));
-                    var bmp = new System.Windows.Media.Imaging.BitmapImage(); bmp.BeginInit(); bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; bmp.StreamSource = ms; bmp.EndInit(); bmp.Freeze();
-                    try { Clipboard.SetImage(bmp); Engine.SetStatus("Chart image copied to the clipboard"); } catch (Exception ex) { Engine.SetStatus("Clipboard failed: " + ex.Message); }
-                    return null;
-                }
-            case "clipboardText": { string text = args.GetProperty("text").GetString() ?? ""; try { Clipboard.SetText(text); } catch (Exception ex) { Engine.SetStatus("Clipboard failed: " + ex.Message); return false; } return true; }
-            case "openUrl":
-                {
-                    string url = args.GetProperty("url").GetString() ?? "";
-                    if (url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
-                    return null;
+                    string path = args.TryGetProperty("path", out var pp) ? pp.GetString() ?? "" : "";
+                    var candidates = new[] { Path.Combine(AppContext.BaseDirectory, "NexysBus.exe"), Path.Combine(AppContext.BaseDirectory, "..", "NexysBus", "NexysBus.exe"), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "NexysBus", "NexysBus.exe"), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "NexysBus", "NexysBus.exe") };
+                    var exe = candidates.FirstOrDefault(File.Exists);
+                    if (exe != null) { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, $"\"{path}\"") { UseShellExecute = true }); Engine.SetStatus("Opened in NexysBus: " + Path.GetFileName(path)); return exe; }
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/Kim-Hakseong/nexys-bus/releases") { UseShellExecute = true });
+                    Engine.SetStatus("NexysBus is not installed — opening its release page"); return null;
                 }
             case "quit": Close(); return null;
         }
+        var (handled, result) = await HostCommands.TryAsync(this, Engine, cmd, args);
+        if (handled) return result;
         throw new NotSupportedException("unknown command " + cmd);
     }
 
-    static byte[] PngBytes(JsonElement args) { string d = args.GetProperty("dataUrl").GetString() ?? ""; int i = d.IndexOf(','); return Convert.FromBase64String(i >= 0 ? d[(i + 1)..] : d); }
+    /// <summary>VIEW-only page commands (analysis, report) — tried by the bridge before the host commands.</summary>
+    public bool AppDispatch(string cmd, JsonElement r, out object? result)
+    {
+        var e = Engine; result = null;
+        switch (cmd)
+        {
+            case "busNotice.clear": e.BusNotice = null; return true;
+            case "analysis.function": e.Analysis.SelectFunction(Bridge.S(r, "name")); return true;
+            case "analysis.param": e.Analysis.SetParam(Bridge.S(r, "key"), Bridge.S(r, "value")); return true;
+            case "analysis.inputs": e.Analysis.SetInputs(Bridge.SL(r, "channels")); return true;
+            case "analysis.run": result = e.Analysis.RunAsync(r.TryGetProperty("function", out var fnEl) ? fnEl.GetString() : null).ContinueWith(t => (object?)t.Result, TaskScheduler.FromCurrentSynchronizationContext()); return true;
+            case "analysis.cancel": e.Analysis.Cancel(); return true;
+            case "analysis.show": result = e.Analysis.ShowInView(); return true;
+            case "report.add": e.Report.Add(Bridge.S(r, "kind", "Title"), Bridge.I(r, "chart"), Bridge.S(r, "text")); return true;
+            case "report.remove": e.Report.Remove(Bridge.I(r, "idx")); return true;
+            case "report.move": e.Report.Move(Bridge.I(r, "idx"), Bridge.I(r, "dir", 1)); return true;
+            case "report.text": e.Report.SetText(Bridge.I(r, "idx"), Bridge.S(r, "text")); return true;
+            case "report.clear": e.Report.Clear(); return true;
+            case "report.page": { int wpx = Bridge.I(r, "width", 794); result = Task.Run(() => (object?)("data:image/png;base64," + Convert.ToBase64String(e.Report.PreviewPng(wpx)))); return true; }
+            case "report.export": { string path = Bridge.S(r, "path"); bool pdf = Bridge.B(r, "pdf"); result = Task.Run(() => { e.Report.ExportTo(path, pdf); e.SetStatus("Exported " + path); return (object?)null; }); return true; }
+        }
+        return false;
+    }
 
     /// <summary>Screenshot of the page (what the user sees) as PNG.</summary>
     public async Task CaptureAsync(string path)
@@ -263,29 +224,3 @@ public partial class MainWindow : Window
     public DataFile? OpenFile(string path) => Engine.OpenFile(path);
 }
 
-/// <summary>Version strings for the title bar, the page header and the About dialog (from the assembly's InformationalVersion).</summary>
-public static class AppInfo
-{
-    public static string Version { get; } = (typeof(AppInfo).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).FirstOrDefault() as System.Reflection.AssemblyInformationalVersionAttribute)?.InformationalVersion.Split('+')[0] ?? "0.9.4-beta";
-    /// <summary>Pre-release (beta or release candidate): the about dialog shows the feedback notice.</summary>
-    public static bool IsBeta => Version.Contains("beta", StringComparison.OrdinalIgnoreCase) || Version.Contains("-rc", StringComparison.OrdinalIgnoreCase);
-    /// <summary>"0.9.0 beta"</summary>
-    public static string VersionText => Version.Replace("-beta", " beta").Replace("-rc", " rc");
-    public const string Repo = "https://github.com/Kim-Hakseong/nexys-view";
-    public const string Issues = Repo + "/issues";
-}
-
-public sealed class Branding
-{
-    public string displayName { get; set; } = "Nexys VIEW";
-    public static Branding Load()
-    {
-        try
-        {
-            var p = Path.Combine(AppContext.BaseDirectory, "branding.json");
-            if (File.Exists(p)) return JsonSerializer.Deserialize<Branding>(File.ReadAllText(p)) ?? new Branding();
-        }
-        catch { }
-        return new Branding();
-    }
-}

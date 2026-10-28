@@ -12,14 +12,15 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <Deterministic>true</Deterministic>
-    <Version>1.0.0-rc</Version>
+    <Version>1.0.0-rc.2</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
-    <InformationalVersion>1.0.0-rc</InformationalVersion>
+    <InformationalVersion>1.0.0-rc.2</InformationalVersion>
     <Company>Nexys</Company>
     <Product>Nexys VIEW</Product>
   </PropertyGroup>
   <PropertyGroup>
-    <!-- optional .dxd reader: sibling project outside this repository -->
+    <!-- nexys-core projects (NexysView.Core / Render / Host): next to the app here, a git submodule at app/core in the public repository -->
+    <CoreDir>$(MSBuildThisFileDirectory)core\</CoreDir>
   </PropertyGroup>
 </Project>

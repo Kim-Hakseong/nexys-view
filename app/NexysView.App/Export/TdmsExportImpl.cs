@@ -6,7 +6,7 @@ namespace NexysView.App.Export;
 public static partial class TdmsExport
 {
     /// <summary>Write every channel of every open file to one TDMS (groups "<file>/<group>"), chunked (1M samples/segment).</summary>
-    static partial void SaveAllImpl(Services.AppState state, string path, ref int count)
+    static partial void SaveAllImpl(Host.AppState state, string path, ref int count)
     {
         var chans = new List<(string group, string name, long length, Func<long, double[], int> read, IReadOnlyDictionary<string, object>? props)>();
         var groups = new Dictionary<string, IReadOnlyDictionary<string, object>>();

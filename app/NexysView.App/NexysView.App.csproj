@@ -15,8 +15,12 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
     <PackageReference Include="System.Management" Version="8.0.0" />
     <PackageReference Include="SkiaSharp" Version="3.119.0" />
-    <ProjectReference Include="..\NexysView.Core\NexysView.Core.csproj" />
-    <ProjectReference Include="..\NexysView.Render\NexysView.Render.csproj" />
+    <ProjectReference Include="$(CoreDir)NexysView.Core\NexysView.Core.csproj" />
+    <ProjectReference Include="$(CoreDir)NexysView.Render\NexysView.Render.csproj" />
+    <ProjectReference Include="$(CoreDir)NexysView.Host\NexysView.Host.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="NexysView.Host" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets\fonts\*.ttf" />

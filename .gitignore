@@ -7,7 +7,7 @@ dist/
 .vs/
 # web
 node_modules/
-app/web/dist/
+**/web/dist/
 # third-party binaries / redistributables (downloaded at build time)
 installer/redist/
 *.dll
@@ -20,3 +20,4 @@ ref/
 poc/
 # app runtime files
 layout.json
+settings.json

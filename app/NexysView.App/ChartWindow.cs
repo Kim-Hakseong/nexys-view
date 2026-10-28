@@ -54,7 +54,7 @@ public sealed class ChartWindow : Window
             await Web.EnsureCoreWebView2Async(env);
             var core = Web.CoreWebView2;
             MainWindow.ConfigureCore(core);
-            Bridge = new Bridge(core, env, _owner.Engine, Dispatcher, _owner.HostCommand);
+            Bridge = new Bridge(core, env, _owner.Engine, Dispatcher, _owner.HostCommand, _owner.AppDispatch);
             Bridge.Ready += () => Dispatcher.BeginInvoke(() => { Bridge.PushSnapshot(); _ready.TrySetResult(); });
             core.Navigate($"https://app.nexys/index.html?win={Id}");
             Diag.Trace($"chart window {Id} core ready ({sw.ElapsedMilliseconds} ms)");

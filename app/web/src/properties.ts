@@ -1,10 +1,10 @@
 // Right aside: PROPERTIES for the selected channel (mockup view.html) or chart / file (same tokens).
 // 0.9.3: cursor mode + band start/end inputs, x-axis link, detail chart, y-axis range/log/side, curve style (line/step/points,
 // width, color, own axis), exports.
-import { bridge } from './bridge';
-import { I } from './icons';
-import { ChartDto, FileDto, PropsDto, State } from './types';
-import { curveColor, esc, fmtInt, fmtRead, fmtSec, fmtSigned, fmtValue, h, rangeBarSvg } from './util';
+import { bridge } from '@core/bridge';
+import { I } from '@core/icons';
+import { ChartDto, FileDto, PropsDto, State } from '@core/types';
+import { curveColor, esc, fmtInt, fmtRead, fmtSec, fmtSigned, fmtValue, h, rangeBarSvg } from '@core/util';
 
 const kv = (k: string, v: string, sans = false) => v === '' || v == null ? '' : `<div class="kv"><span class="k">${esc(k)}</span><span class="v${sans ? ' sans' : ''}" title="${esc(v)}">${esc(v)}</span></div>`;
 const sect = (icon: string, title: string, body: string, meta = '', grow = false) => `<div class="sect${grow ? ' grow' : ''}"><div class="sect-h">${icon}${esc(title)}${meta ? `<span class="m">${esc(meta)}</span>` : ''}</div>${body}</div>`;

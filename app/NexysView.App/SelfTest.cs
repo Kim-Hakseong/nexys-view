@@ -9,12 +9,12 @@ using NexysView.Render;
 
 namespace NexysView.App;
 
-/// <summary>Command-line automation on the web UI: --shot, --selftest, --v3, --stress, --stress-analysis. Steps run as real DOM
+/// <summary>Command-line automation on the web UI: --shot, --selftest, --v3, --v093, --v094, --stress, --stress-analysis (bus gates moved to NexysBus). Steps run as real DOM
 /// events inside the page (window.nx.test.*) and are awaited through the bridge; captures are WebView2 previews.</summary>
 public static partial class SelfTest
 {
     public static string[] Args = Array.Empty<string>();
-    public static bool Enabled => Args.Length > 0 && Args[0] is "--shot" or "--selftest" or "--stress" or "--stress-analysis" or "--v3" or "--v093" or "--v094" or "--v0100" or "--v100rc";
+    public static bool Enabled => Args.Length > 0 && Args[0] is "--shot" or "--selftest" or "--stress" or "--stress-analysis" or "--v3" or "--v093" or "--v094";
     static readonly List<string> Log = new();
     public static string OutDir = "";
     static readonly List<string> Gate = new();
@@ -42,8 +42,6 @@ public static partial class SelfTest
             else if (Args[0] == "--v3") await V3Async(w);
             else if (Args[0] == "--v093") await V093Async(w);
             else if (Args[0] == "--v094") await V094Async(w);
-            else if (Args[0] == "--v0100") await V0100Async(w);
-            else if (Args[0] == "--v100rc") await V100Async(w);
             else await FullAsync(w);
         }
         catch (Exception ex) { L("FATAL " + ex); }
@@ -130,6 +128,7 @@ public static partial class SelfTest
         await Idle(w, 400);
         if (Arg("--tour") != "") L("tour " + await JS(w, $"return await nx.test.tour({Arg("--tour")});"));
         if (Arg("--help") != "") L("help " + await JS(w, $"return await nx.test.help('{Arg("--help")}');"));
+        if (Arg("--settings") == "1") { await JS(w, "await nx.test.clickSel('[data-a=settings]'); return true;"); await Idle(w, 300); }
         if (Arg("--tour") != "" || Arg("--help") != "") await Idle(w, 500);
         await Shot(w, Arg("--name", "shot"));
         L("buffers " + await w.Bridge!.Eval("JSON.stringify(Array.from(nx.bridge.buffers.keys()))"));
@@ -186,10 +185,6 @@ public static partial class SelfTest
     static partial void V3Impl(MainWindow w, ref Task task);
     static Task V3Async(MainWindow w) { Task t = Task.CompletedTask; V3Impl(w, ref t); return t; }
     static partial void V094Impl(MainWindow w, ref Task task);
-    static Task V0100Async(MainWindow w) { Task t = Task.CompletedTask; V0100Impl(w, ref t); return t; }
-    static partial void V0100Impl(MainWindow w, ref Task task);
-    static Task V100Async(MainWindow w) { Task t = Task.CompletedTask; V100Impl(w, ref t); return t; }
-    static partial void V100Impl(MainWindow w, ref Task task);
     static Task V094Async(MainWindow w) { Task t = Task.CompletedTask; V094Impl(w, ref t); return t; }
     static partial void V093Impl(MainWindow w, ref Task task);
     static Task V093Async(MainWindow w) { Task t = Task.CompletedTask; V093Impl(w, ref t); return t; }

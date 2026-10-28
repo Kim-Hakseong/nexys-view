@@ -1,10 +1,10 @@
 // NAVIGATOR aside: search (substring or * ? wildcards), TREE/FLAT, DROP ALL, virtualized tree
 // (file 30px → group 26px → channel 26px, name hierarchy on '.' and '/'), drag source for channels (Ctrl-click two → XY).
-import { bridge } from './bridge';
-import { I } from './icons';
-import { DRAG_CH, DRAG_GROUP } from './plot';
-import { ChannelDto, FileDto, State } from './types';
-import { curveColor, esc, fmtInt, h, sparkSvg } from './util';
+import { bridge } from '@core/bridge';
+import { I } from '@core/icons';
+import { DRAG_CH, DRAG_GROUP } from '@core/plot';
+import { ChannelDto, FileDto, State } from '@core/types';
+import { curveColor, esc, fmtInt, h, sparkSvg } from '@core/util';
 
 interface Row { kind: 'file' | 'group' | 'node' | 'ch'; depth: number; h: number; key: string; file: FileDto; name: string; meta: string; ch?: ChannelDto; count?: number; open?: boolean; }
 

@@ -65,7 +65,7 @@ public static class TdvImport
         return res;
     }
 
-    public static Channel? Resolve(Services.AppState state, string ext)
+    public static Channel? Resolve(Host.AppState state, string ext)
     {
         // "[2]/Speed" → group index (1-based, across open files) + channel name; "Group/Name"; or bare name
         var m = System.Text.RegularExpressions.Regex.Match(ext, @"^\[(\d+)\]/(.+)$");

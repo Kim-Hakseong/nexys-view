@@ -1,11 +1,11 @@
 // VIEW center: chart cards (PlotView per chart, keyed by id), value tables (virtualized, cursor row tracking, rectangular
 // selection + Ctrl+C), the dashed "new chart" drop zone with the drop rule (by unit / per channel) and "+ TABLE".
-import { bridge, WIN } from './bridge';
-import { I } from './icons';
-import { DRAG_CH, DRAG_CURVE, DRAG_GROUP, PlotView } from './plot';
+import { bridge, WIN } from '@core/bridge';
+import { I } from '@core/icons';
+import { DRAG_CH, DRAG_CURVE, DRAG_GROUP, PlotView } from '@core/plot';
 const DRAG_PAGE = 'application/x-nexys-page';
-import { State, TableDto } from './types';
-import { esc, fmtInt, fmtValue, h } from './util';
+import { State, TableDto } from '@core/types';
+import { esc, fmtInt, fmtValue, h } from '@core/util';
 
 const ROW_H = 22, HEAD_H = 26, MAX_SPACER = 6_000_000;
 

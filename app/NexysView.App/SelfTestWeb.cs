@@ -304,9 +304,8 @@ public static partial class SelfTest
             string root = TdmsRoot();
             files.AddRange(Directory.GetFiles(Path.Combine(root, "work", "userfiles"), "*.tdms").OrderBy(f => f));
             files.Add(Path.Combine(root, "ref", "examples", "data", "Example.tdms"));
-            // 1.0: the stress mix also cycles the migrated .dxd reader and both bus captures (1553 / 429)
+            // 1.0: the stress mix also cycles the migrated .dxd reader (bus captures are NexysBus's since 1.0.0-rc.2)
             string dxd = Path.Combine(root, "app", "NexysView.Tests", "data", "dxd", "sample_vehsim.dxd"); if (File.Exists(dxd)) files.Add(dxd);
-            if (SampleBus.Ensure1553() is { } m1) files.Add(m1); if (SampleBus.Ensure429() is { } m2) files.Add(m2);
         }
         return files;
     }

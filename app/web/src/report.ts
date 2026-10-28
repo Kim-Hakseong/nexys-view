@@ -1,8 +1,8 @@
 // REPORT: blocks card (left), PAGE preview (center, PNG from the engine), block properties (right).
-import { bridge } from './bridge';
-import { I } from './icons';
-import { State } from './types';
-import { esc, h } from './util';
+import { bridge } from '@core/bridge';
+import { I } from '@core/icons';
+import { State } from '@core/types';
+import { esc, h } from '@core/util';
 
 export class Report {
   el: HTMLElement; left: HTMLElement; center: HTMLElement; right: HTMLElement; private img: HTMLImageElement; private version = -1; private S: State | null = null;

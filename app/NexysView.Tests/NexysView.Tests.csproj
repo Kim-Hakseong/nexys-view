@@ -10,8 +10,12 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
-    <ProjectReference Include="..\NexysView.Core\NexysView.Core.csproj" />
-    <ProjectReference Include="..\NexysView.Render\NexysView.Render.csproj" />
+    <ProjectReference Include="$(CoreDir)NexysView.Core\NexysView.Core.csproj" />
+    <ProjectReference Include="$(CoreDir)NexysView.Render\NexysView.Render.csproj" />
+    <ProjectReference Include="$(CoreDir)NexysView.Host\NexysView.Host.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="NexysView.Host" />
     <ProjectReference Include="..\NexysView.App\NexysView.App.csproj" />
   </ItemGroup>
   <ItemGroup>

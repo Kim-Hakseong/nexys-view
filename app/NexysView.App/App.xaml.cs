@@ -8,6 +8,15 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        AppPaths.AppName = "NexysView"; AppPaths.Ephemeral = () => Program.Fresh || SelfTest.Enabled; AppPaths.Automation = () => SelfTest.Enabled; AppInfo.Name = "Nexys VIEW";
+        foreach (var ext in new[] { ".csv", ".txt", ".xyz" }) AppState.ExtraOpeners[ext] = Import.CsvDataSource.Open;
+        AppState.PluginOpener = (data, plugin) => System.IO.Path.GetExtension(plugin).ToLowerInvariant() switch
+        {
+            ".vbs" => Plugins.VbsDataPlugin.Open(data, plugin),
+            ".py" => Import.PluginDataSource.OpenWithPython(data, plugin),
+            ".dll" => Import.PluginDataSource.Open(data, plugin),
+            _ => throw new NotSupportedException("Plugin must be .vbs, .py or .dll"),
+        };
         Diag.Trace($"app start args=[{string.Join(" ", e.Args)}] pid={Environment.ProcessId}");
         DispatcherUnhandledException += (_, ex) => { Diag.Trace("UNHANDLED " + ex.Exception); };
         AppDomain.CurrentDomain.UnhandledException += (_, ex) => Diag.Trace("UNHANDLED(domain) " + ex.ExceptionObject);
