@@ -128,6 +128,16 @@ public sealed class Bridge
         switch (cmd)
         {
             case "state": _sentFilesVersion = _e.FilesVersion; return _e.Snapshot(true);
+            // 0.10.0: MIL-STD-1553 view + ICD module
+            case "m1553.rows": return _e.Mil1553.Rows(I(r, "first"), I(r, "count", 200));
+            case "m1553.filter": _e.Mil1553.SetFilter(I(r, "rt", -1), I(r, "sa", -1), I(r, "tr", -1), I(r, "bus", -1), B(r, "errorsOnly")); return _e.Mil1553.RowCount;
+            case "m1553.decode": return _e.Mil1553.Decode(I(r, "i", -1));
+            case "m1553.file": _e.Mil1553.SelectFile(S(r, "name") is { Length: > 0 } mf ? mf : null); return null;
+            case "m1553.chart": { var c = _e.Charts.FirstOrDefault(c => c.PageId == 0 && c.WindowId == 0) ?? _e.AddChart(record: false, pageId: 0); return c.Id; }
+            case "setFeature": if (S(r, "name") == "icdExport") _e.IcdExport = B(r, "on"); if (S(r, "name") == "icdTemplateDir") _e.IcdTemplateDir = S(r, "value").Trim(); _e.Touch(); return null;
+            case "icd.load": return _e.Mil1553.LoadIcd(S(r, "path"));
+            case "icd.dummy": _e.Mil1553.LoadDummyIcd(); return null;
+            case "icd.export": return _e.Mil1553.Export(S(r, "dir"), S(r, "template") is { Length: > 0 } td ? td : null, B(r, "rt"));
             case "open": foreach (var p in SL(r, "paths")) _e.OpenFile(p); return null;
             case "openWithPlugin": foreach (var p in SL(r, "paths")) _e.OpenWithPlugin(p, S(r, "plugin")); return null;
             case "closeFile": _e.CloseFile(S(r, "name")); return null;

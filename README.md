@@ -4,9 +4,11 @@
 
 **측정 데이터 뷰어 — TDMS·TDM 로그를 열고, 1,000만 샘플 곡선을 16 ms 안에 움직이고, 밴드로 고른 구간을 상세 차트에서 바로 본다.**
 
-![version](https://img.shields.io/badge/version-0.9.4--beta-7A1020) ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-17181A) ![runtime](https://img.shields.io/badge/.NET-8.0%20self--contained-5F5E5A) ![ui](https://img.shields.io/badge/UI-WebView2-5F5E5A)
+![version](https://img.shields.io/badge/version-0.10.0--beta-7A1020) ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-17181A) ![runtime](https://img.shields.io/badge/.NET-8.0%20self--contained-5F5E5A) ![ui](https://img.shields.io/badge/UI-WebView2-5F5E5A)
 
 C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 렌더 · 단위 테스트 514개
+
+**0.10.0-beta — MIL-STD-1553 버스 모니터 캡처(`.mon`)**: 캡처 파일을 열면 **MIL1553** 모드가 생긴다. 메시지 리스트(시간·버스·RT·SA·T/R·WC·명령어·상태어·오류·활동·데이터, 100만 레코드 가상 스크롤), RT/SA/T/R/버스/오류 필터(100만 건 10 ms대), 메시지 선택 시 디코드 패널(상태어·오류·활동 비트, 데이터워드), 워드/EU 추이는 기존 플롯 엔진으로 그린다. 레코드 열(rt·sa·w01…w32)은 일반 채널이라 VIEW 차트에도 끌어다 놓을 수 있다. 설정(툴바 슬라이더 아이콘)에서 **ICD export 모듈**을 켜면 ICD(CSV/JSON 허브: 메시지 rt/sa/tr/wc/주기/버스, 워드 index/bit/type/scale/offset/unit)를 불러와 EU 채널 그룹(`ICD:<메시지>`)을 만들고, 버스 시뮬레이터 프로젝트(템플릿 프로젝트 폴더를 복제·갱신)와 자동화 스크립트로 내보낸다. 템플릿이 없는 PC에서는 허브 JSON/CSV + 스크립트만 쓴다.
 
 > ⚠️ 베타입니다. 기능·화면·파일 형식이 바뀔 수 있습니다. 문제는 [GitHub Issues](https://github.com/Kim-Hakseong/nexys-view/issues)로 알려 주세요 (앱 안 `F1` → 정보 대화상자의 링크).
 
@@ -17,7 +19,7 @@ C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 렌더 �
 ## 설치와 실행
 
 ### 설치형 (권장)
-1. [Releases](https://github.com/Kim-Hakseong/nexys-view/releases)에서 `NexysView-0.9.4-beta-setup.exe`를 받아 실행한다.
+1. [Releases](https://github.com/Kim-Hakseong/nexys-view/releases)에서 `NexysView-0.10.0-beta-setup.exe`를 받아 실행한다.
 2. Program Files에 설치되고 시작 메뉴·바탕화면 바로가기가 만들어진다. `.tdms` / `.tdm` / `.dxd` 연결은 설치 중 선택(기본 해제).
 3. Microsoft Edge WebView2 런타임이 없는 PC에서는 설치 중에 자동으로 받아 설치한다(인터넷 필요). Windows 11과 최신 Windows 10에는 이미 들어 있다.
 
@@ -118,6 +120,8 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 | .csv / .txt / .xyz | ✅ | — | 구분자·헤더 자동 감지 |
 | .dxd | ✅ (배포본) | — | 저장소 빌드에는 없음 |
 | DataPlugin (.vbs / .py / .dll) | ✅ | — | VBS 객체 모델 부분집합, Python 마셜러 워커, C++ SDK DLL |
+| .mon (MIL-STD-1553 버스 모니터 캡처) | ✅ | ✅ (가상 샘플·재기록) | 복합문서 메타 + 120 B 고정 레코드, 끝 u32 오프셋. 레코드 열·데이터워드 채널 + ICD EU 채널 |
+| ICD 허브 (.csv / .json) | ✅ | ✅ | 메시지·워드 스키마, 버스 시뮬레이터 프로젝트 내보내기(템플릿 폴더 필요) + 자동화 스크립트 |
 | .tdv | ✅ | — | VIEW 레이아웃 → 차트·테이블 |
 
 ## 단축키·조작
@@ -142,7 +146,8 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 | 테이블 선택 복사 | 셀 드래그 → `Ctrl+C` |
 | 파일 비교 | 파일 행 `Ctrl`-클릭 → COMPARE |
 
-## 알려진 문제 (0.9.4 beta)
+## 알려진 문제 (0.10.0 beta)
+- MIL-STD-1553: 오류 비트 이름은 HIT/SYSTEM 외에는 비트 번호로만 표시한다. 절대 시각(IRIG)은 상위 32비트를 µs로 합쳐 상대 초로만 보여 준다. 버스 시뮬레이터 프로젝트 내보내기는 필드의 비트 범위·타입·분해능만 쓰고 offset·단위는 허브 파일에만 남긴다(시뮬레이터에서 열어 확인하는 절차는 베타 검증 항목). XLSX ICD는 CSV로 저장해서 불러온다.
 - 메모리: 10곡선 × 10M을 띄우고 상세 연동·밴드 드래그를 하면 앱 프로세스 ~650 MB(메모리 맵 파일 페이지 포함, 힙 ~300 MB) + WebView2 프로세스 ~500 MB. 떼어낸 창 하나당 앱 +13~16 MB, WebView2 프로세스 +약 100 MB. 창을 닫으면 돌아온다.
 - 밴드 판독 띠의 mean·RMS는 구간이 65,536 샘플을 넘으면 최대 2,048개 표본으로 추정한 값(≈ 표시). min/max와 CSV/TDMS 내보내기는 정확하다.
 - 떼어낸 창에는 NAVIGATOR가 없어 채널 드롭이 안 된다(주 창에서 곡선을 바꾼 뒤 창으로 보낸다). 창 간 차트 드래그는 지원하지 않는다.

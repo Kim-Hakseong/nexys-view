@@ -142,9 +142,23 @@ public partial class MainWindow : Window
                     CloseChartWindow(id); return null;
                 }
             case "window.list": return Windows.Values.Select(w => new { id = w.Id, title = w.Title, x = w.Rect.X, y = w.Rect.Y, w = w.Rect.Width, h = w.Rect.Height }).ToList();
+            case "icd.importDialog":
+                {
+                    var dlg = new OpenFileDialog { Title = "ICD (CSV or hub JSON)", Filter = "ICD|*.csv;*.json|CSV|*.csv|Hub JSON|*.json|All|*.*" };
+                    if (dlg.ShowDialog(this) == true) return Engine.Mil1553.LoadIcd(dlg.FileName);
+                    return null;
+                }
+            case "icd.exportDialog":
+                {
+                    if (Engine.Mil1553.Hub == null) { Engine.SetStatus("Load an ICD first (ICD import)"); return null; }
+                    var dlg = new SaveFileDialog { Title = "Export project folder (choose the folder name)", Filter = "Project folder|*.folder", FileName = "IcdProject.folder" };
+                    if (dlg.ShowDialog(this) != true) return null;
+                    string dir = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dlg.FileName)!, System.IO.Path.GetFileNameWithoutExtension(dlg.FileName));
+                    return Engine.Mil1553.Export(dir, null, true);
+                }
             case "openDialog":
                 {
-                    var dlg = new OpenFileDialog { Filter = "Measurement data|*.tdms;*.tdm;*.dxd;*.csv;*.txt;*.xyz;*.tdv|TDMS|*.tdms|TDM|*.tdm|DXD|*.dxd|CSV|*.csv;*.txt|VIEW layout|*.tdv|All|*.*", Multiselect = true };
+                    var dlg = new OpenFileDialog { Filter = "Measurement data|*.tdms;*.tdm;*.dxd;*.csv;*.txt;*.xyz;*.mon;*.tdv|TDMS|*.tdms|TDM|*.tdm|DXD|*.dxd|CSV|*.csv;*.txt|MIL-STD-1553 capture|*.mon|VIEW layout|*.tdv|All|*.*", Multiselect = true };
                     if (dlg.ShowDialog(this) == true) foreach (var f in dlg.FileNames) Engine.OpenFile(f);
                     return null;
                 }

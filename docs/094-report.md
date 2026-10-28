@@ -90,6 +90,10 @@
 | 단위 테스트 | 514/514 (work/bench/gate_tests_094.txt) |
 | `--stress --iter 200` + 창 열기/닫기 50회 | §6 |
 
+## 4.1 배포
+- `app/dist/NexysView-0.9.4-beta-setup.exe` 61.8 MB (61,799,347 B), `app/dist/NexysView-0.9.4-beta-portable.exe` 82.2 MB (82,209,425 B). 무인 설치(work/beta/install_test/0.9.4) → 설치본 `--fresh` 실행(제목 "Nexys VIEW 0.9.4 beta") → 무인 언인스톨(폴더 제거) 확인, 포터블 실행 제목 확인. 단위 테스트 514/514(work/bench/gate_tests_094.txt).
+- 저장소 https://github.com/Kim-Hakseong/nexys-view 태그 v0.9.4-beta, Release https://github.com/Kim-Hakseong/nexys-view/releases/tag/v0.9.4-beta. 내보내기 검사: 타사 이름 0건, 바이너리 0건. README: 페이지·여러 창 절(캡처 main_window/window/pages), 툴바 문구, 단축키 표(Ctrl+Shift+D, 페이지, 창), 성능 표(창 간 팬 4 ms), 알려진 문제.
+
 ## 5. 알려진 제한
 - 떼어낸 창에는 NAVIGATOR가 없다(채널 드롭 불가). 창 간 차트 드래그는 없고, 되돌리려면 창을 닫거나 메뉴 "주 창으로".
 - 창마다 WebView2 렌더러가 하나 더 떠 약 100 MB가 든다(닫으면 해제).

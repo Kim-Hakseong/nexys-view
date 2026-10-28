@@ -53,6 +53,7 @@ public sealed class AppState
             ".dxd" => Import.DxdDataSource.Open(path),
 #endif
             ".csv" or ".txt" or ".xyz" => Import.CsvDataSource.Open(path),
+            ".mon" => Core.Mil1553.Mil1553DataSource.Open(path),
             _ => throw new NotSupportedException("Unsupported file type: " + Path.GetExtension(path)),
         };
         Files.Add(df);

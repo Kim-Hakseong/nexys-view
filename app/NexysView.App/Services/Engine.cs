@@ -58,6 +58,13 @@ public sealed class Engine
     public string AlignMode { get; set; } = "start";
     public double AlignOffsetMs { get; set; } = 500;
     public string Mode { get; set; } = "VIEW";
+    /// <summary>0.10.0: features.icdExport (layout.json) — shows the ICD import / project export tools; the 1553 view itself is always on.</summary>
+    public bool IcdExport { get; set; }
+    /// <summary>Folder of a bus-simulator template project (one .CPJ + the 1553 device .CDV) cloned by the ICD export; empty = file export off.</summary>
+    public string IcdTemplateDir { get; set; } = "";
+    public Mil1553Service Mil1553 { get; }
+    /// <summary>Channel groups were added/removed outside AppState.Open (ICD attach): resend the file tree.</summary>
+    public void FilesChangedExternally() { _fileDto.Clear(); FilesVersion++; Changed?.Invoke(); }
     public AnalysisService Analysis { get; }
     public ReportService Report { get; }
     public event Action? Changed;
@@ -73,6 +80,7 @@ public sealed class Engine
     public Engine()
     {
         Analysis = new AnalysisService(this);
+        Mil1553 = new Mil1553Service(this);
         Report = new ReportService(this);
         State.Status += s => { StatusText = s; StatusChanged?.Invoke(); };
         State.FilesChanged += () => { Led = State.Files.Count > 0 ? "ready" : "idle"; _fileDto.Clear(); FilesVersion++; Changed?.Invoke(); };
@@ -692,6 +700,7 @@ public sealed class Engine
         return new
         {
             theme = Theme, plot = Plot, mode = Mode, developer = Developer, legacyTabs = ShowLegacyTabs, dropMode = DropMode,
+            features = new { icdExport = IcdExport }, mil1553 = Mil1553.Dto(),
             pages = Pages.Select(p => new { id = p.Id, name = p.Name, columns = p.Columns, charts = Charts.Count(c => c.PageId == p.Id && c.WindowId == 0) }).ToList(), activePage = ActivePage, autoPage = new { on = AutoPage, n = AutoPageN },
             windows = Windows.Select(kv => new { id = kv.Key, title = kv.Value, charts = Charts.Count(c => c.WindowId == kv.Key) }).ToList(),
             app = new { version = AppInfo.Version, versionText = AppInfo.VersionText, beta = AppInfo.IsBeta, repo = AppInfo.Repo, issues = AppInfo.Issues, tourSeen = TourSeen, automation = SelfTest.Enabled },

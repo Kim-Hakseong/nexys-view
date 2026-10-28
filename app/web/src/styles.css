@@ -411,3 +411,40 @@ input, select { font-family: var(--sans); }
 .charts.cols2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .charts .chart { min-height: 0; }
 .charts:empty { display: none; }
+
+/* ---------- 0.10.0: MIL-STD-1553 mode (tokens only; no accent borders, emphasis = panel-alt + weight) ---------- */
+.center.m1553 { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.m1553-filters { height: 40px; flex: 0 0 40px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border); }
+.m1553-filters .in { height: 24px; box-sizing: border-box; width: 56px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--panel); padding: 0 8px; font: 11px var(--mono); color: var(--text); }
+.m1553-filters .sp { flex: 1; }
+.m1553-scroll { flex: 1; min-height: 0; overflow: auto; position: relative; font: 11px var(--mono); }
+.m1553-scroll .tspacer { position: relative; }
+.m1553-scroll .thead, .m1553-scroll .trow { display: grid; grid-template-columns: 76px 96px 36px 32px 32px 58px 32px 48px 48px 48px 48px 110px 1fr; column-gap: 8px; padding: 0 10px; align-items: center; white-space: nowrap; }
+.m1553-scroll .thead { position: sticky; top: 0; z-index: 1; height: 26px; background: var(--panel-alt); border-bottom: 1px solid var(--border); font: 600 10px var(--sans); letter-spacing: 0.06em; color: var(--muted); }
+.m1553-scroll .tinner { position: absolute; left: 0; right: 0; }
+.m1553-scroll .trow { position: absolute; left: 0; right: 0; height: 22px; border-bottom: 1px solid var(--border); color: var(--text); cursor: default; overflow: hidden; }
+.m1553-scroll .trow:hover { background: var(--panel-alt); }
+.m1553-scroll .trow.sel { background: var(--panel-alt); font-weight: 500; }
+.m1553-scroll .trow .dim { color: var(--faint); }
+.m1553-scroll .trow .data { overflow: hidden; text-overflow: ellipsis; }
+.m1553-scroll .trow .busb { color: var(--amber); }
+.m1553-scroll .trow .errv, .m1553-dec .errv { color: var(--red); }
+.m1553-bottom { display: flex; gap: 12px; flex: 0 0 300px; min-height: 0; }
+.m1553-dec { flex: 0 0 440px; min-height: 0; }
+.m1553-dec .kv { display: grid; grid-template-columns: 96px 1fr; gap: 4px 12px; padding: 10px 12px; font-size: 11px; }
+.m1553-dec .kv .k { color: var(--faint); letter-spacing: 0.04em; font-size: 10px; align-self: center; }
+.m1553-dec .kv b { font-weight: 600; }
+.m1553-words { border-collapse: collapse; width: 100%; font-size: 11px; }
+.m1553-words th { text-align: left; font: 600 10px var(--sans); letter-spacing: 0.06em; color: var(--muted); padding: 0 12px; height: 24px; border-bottom: 1px solid var(--border); background: var(--panel-alt); }
+.m1553-words td { padding: 0 12px; height: 22px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.m1553-words tr[data-ch] { cursor: pointer; }
+.m1553-words tr[data-ch]:hover td { background: var(--panel-alt); }
+.m1553-words .eu { font-weight: 500; }
+.m1553-raw { padding: 10px 12px; font-size: 11px; line-height: 1.8; word-break: break-all; }
+.m1553-plot { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.m1553-plot-host { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.m1553-plot-host .chart { flex: 1; min-height: 0; border: 0; border-radius: 0; }
+.mono { font-family: var(--mono); }
+.modal.settings { width: 420px; }
+.modal.settings .opt { display: flex; gap: 10px; align-items: flex-start; padding: 12px 0; font-size: 12px; }
+.modal.settings .opt span > span { display: block; margin-top: 2px; }

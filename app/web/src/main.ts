@@ -11,6 +11,7 @@ import { Report } from './report';
 import { State } from './types';
 import { esc, fmtInt, h } from './util';
 import { ViewArea } from './view';
+import { Mil1553Mode } from './mil1553';
 
 let S: State | null = null;
 const app = document.getElementById('app')!;
@@ -19,7 +20,7 @@ const main = h(`<main class="main"></main>`);
 const ftr = h(`<footer class="ftr"><span class="d"></span><span class="txt"></span><span class="r"></span></footer>`);
 app.append(hdr, main, ftr);
 const help = new Help();
-const nav = new Navigator(); const view = new ViewArea(); const props = new Properties(); const navMode = new NavMode(); const analysis = new Analysis(); const report = new Report();
+const nav = new Navigator(); const view = new ViewArea(); const props = new Properties(); const navMode = new NavMode(); const analysis = new Analysis(); const report = new Report(); const m1553 = new Mil1553Mode();
 let frameInfo = '';
 
 function renderHeader() {
@@ -35,7 +36,8 @@ function renderHeader() {
     return;
   }
   hdr.innerHTML = `<div class="hdr-brand"><div class="hdr-logo" data-a="about" title="About Nexys VIEW (F1)"><img src="brand/Logo.png" alt="Nexys VIEW"></div><div class="hdr-name"><small>${esc((app.versionText || '').toUpperCase())}</small></div></div>
-    <div class="hdr-tools"><nav aria-label="Mode" class="tools-modes">${mode('NAVIGATOR', I.list(15))}${mode('VIEW', I.lineC(15))}${S.legacyTabs ? mode('ANALYSIS', I.sliders(15)) + mode('REPORT', I.file(15)) : ''}</nav><div class="vsep"></div>${tool('open', I.folder(), 'OPEN', 'Open file (Ctrl+O)')}${tool('save', I.save(), 'SAVE', 'Save all channels as TDMS (Ctrl+S)')}<div class="vsep"></div>${tool('undo', I.undo(), 'UNDO', S.undo.can ? `Undo ${S.undo.name} (Ctrl+Z)` : 'Undo (Ctrl+Z)', !S.undo.can)}${tool('redo', I.redo(), 'REDO', 'Redo (Ctrl+Y)', !S.undo.canRedo)}<div class="vsep"></div>${tool('theme', S.theme === 'dark' ? I.sun() : I.theme(), 'THEME', 'Toggle light / dark chrome (Ctrl+T)')}${tool('plot', I.plot(), 'PLOT · ' + S.plot.toUpperCase(), 'Toggle dark / light plot (Ctrl+P)')}<div class="vsep"></div></div>
+    <div class="hdr-tools"><nav aria-label="Mode" class="tools-modes">${mode('NAVIGATOR', I.list(15))}${mode('VIEW', I.lineC(15))}${S.legacyTabs ? mode('ANALYSIS', I.sliders(15)) + mode('REPORT', I.file(15)) : ''}${S.files.some(f => f.format === 'MIL1553') || S.mode === 'MIL1553' ? mode('MIL1553', I.table(15)) : ''}</nav><div class="vsep"></div>${tool('open', I.folder(), 'OPEN', 'Open file (Ctrl+O)')}${tool('save', I.save(), 'SAVE', 'Save all channels as TDMS (Ctrl+S)')}<div class="vsep"></div>${tool('undo', I.undo(), 'UNDO', S.undo.can ? `Undo ${S.undo.name} (Ctrl+Z)` : 'Undo (Ctrl+Z)', !S.undo.can)}${tool('redo', I.redo(), 'REDO', 'Redo (Ctrl+Y)', !S.undo.canRedo)}<div class="vsep"></div>${tool('theme', S.theme === 'dark' ? I.sun() : I.theme(), 'THEME', 'Toggle light / dark chrome (Ctrl+T)')}${tool('plot', I.plot(), 'PLOT · ' + S.plot.toUpperCase(), 'Toggle dark / light plot (Ctrl+P)')}<div class="vsep"></div></div>
+    ${(S as any).features?.icdExport ? `<button type="button" class="tool icon" data-a="icdImport" aria-label="ICD IMPORT" title="ICD 가져오기 (CSV / JSON)">${I.tag()}</button><button type="button" class="tool icon" data-a="icdExport" aria-label="EXPORT PROJECT" title="버스 시뮬레이터 프로젝트 내보내기">${I.link()}</button><div class="vsep"></div>` : ''}<button type="button" class="tool icon" data-a="settings" aria-label="SETTINGS" title="설정">${I.sliders()}</button>
     <div class="vsep"></div><button type="button" class="tool icon" data-a="help" aria-label="HELP" title="사용 가이드 · 기능 투어 (F1)">${I.help()}</button>
     <div class="led-pill"><span class="led ${S.status.led}"></span><span class="led-text">${S.status.led.toUpperCase()}</span></div>`;
 }
@@ -45,6 +47,9 @@ hdr.addEventListener('click', e => {
   const a = (t.closest('[data-a]') as HTMLElement | null)?.dataset.a; if (!a) return;
   if (a === 'about') { showAbout(); return; }
   if (a === 'help') { help.show(); return; }
+  if (a === 'settings') { showSettings(); return; }
+  if (a === 'icdImport') { bridge.call('icd.importDialog'); return; }
+  if (a === 'icdExport') { bridge.call('icd.exportDialog'); return; }
   if (a === 'returnAll') { bridge.call('window.returnAll', { id: WIN }); return; }
   if (a === 'open') bridge.call('openDialog'); else if (a === 'save') bridge.call('saveDialog'); else if (a === 'undo') bridge.call('undo'); else if (a === 'redo') bridge.call('redo');
   else if (a === 'theme') bridge.call('setTheme', { theme: S?.theme === 'dark' ? 'light' : 'dark' }); else if (a === 'plot') bridge.call('setPlot', { plot: S?.plot === 'dark' ? 'light' : 'dark' }); else if (a === 'dev') bridge.call('setDeveloper', { on: !S?.developer });
@@ -53,7 +58,7 @@ function setMode(m: string) { bridge.call('setMode', { mode: m }); }
 
 function renderMain() {
   if (!S) return;
-  const want: HTMLElement[] = WIN > 0 ? [view.el] : S.mode === 'NAVIGATOR' ? [nav.el, navMode.el, props.el] : S.mode === 'ANALYSIS' ? [nav.el, analysis.fns, analysis.center, analysis.params] : S.mode === 'REPORT' ? [report.left, report.center, report.right] : [nav.el, view.el, props.el];
+  const want: HTMLElement[] = WIN > 0 ? [view.el] : S.mode === 'NAVIGATOR' ? [nav.el, navMode.el, props.el] : S.mode === 'ANALYSIS' ? [nav.el, analysis.fns, analysis.center, analysis.params] : S.mode === 'REPORT' ? [report.left, report.center, report.right] : S.mode === 'MIL1553' ? [nav.el, m1553.el] : [nav.el, view.el, props.el];
   want.forEach((el, i) => { if (main.children[i] !== el) main.insertBefore(el, main.children[i] ?? null); });
   while (main.children.length > want.length) main.lastElementChild!.remove();
 }
@@ -81,6 +86,7 @@ function applyState(next: State) {
   if (WIN > 0) { view.setState(S, vcharts, vtables); return; }
   if (S.mode === 'VIEW') { view.setState(S, vcharts, vtables); props.setState(S); }
   else if (S.mode === 'NAVIGATOR') { navMode.setState(S); props.setState(S); }
+  else if (S.mode === 'MIL1553') m1553.setState(S);
   else if (S.mode === 'ANALYSIS') analysis.setState(S);
   else if (S.mode === 'REPORT') report.setState(S);
   if (prevMode !== S.mode) { if (S.mode === 'VIEW') { view.setState(S, vcharts, vtables); for (const pv of view.plots.values()) pv.request({ adopt: true }); } if (S.mode === 'REPORT') report.refreshPage(); }
@@ -90,6 +96,19 @@ bridge.on('undo', m => { if (!S) return; S.undo = { can: m.can, name: m.name, ca
 bridge.on('status', m => { if (!S) return; S.status = { text: m.text, led: m.led }; renderFooter(); const led = hdr.querySelector('.led'); if (led) { led.className = 'led ' + m.led; (hdr.querySelector('.led-text') as HTMLElement).textContent = m.led.toUpperCase(); } });
 bridge.on('invalidate', m => { const ids: number[] = m.charts; const all = ids.includes(-1); for (const [id, pv] of view.plots) if (all || ids.includes(id)) pv.request({ adopt: true }); if (S?.mode === 'ANALYSIS' && (all || ids.includes(0))) (analysis as any).preview?.request(); });
 bridge.on('buffer', () => { /* buffers arrive before the first frame; nothing to do */ });
+
+// ---------- Settings (header): feature modules
+function showSettings() {
+  if (!S || document.querySelector('.settings')) return;
+  const on = !!(S as any).features?.icdExport;
+  const dlg = h(`<div class="modal-bg"><div class="modal settings" role="dialog"><div class="lblh">SETTINGS</div>
+    <label class="opt"><input type="checkbox" data-f="icdExport"${on ? ' checked' : ''}><span><b>ICD export module</b><span class="muted11">features.icdExport — 툴바에 ICD 가져오기 / 버스 시뮬레이터 프로젝트 내보내기 버튼을 켭니다 (기본 꺼짐)</span></span></label>
+    <div class="opt" style="flex-direction:column;align-items:stretch;gap:4px"><b>템플릿 프로젝트 폴더</b><span class="muted11">시뮬레이터의 1553 템플릿 프로젝트(.CPJ + 장치 .CDV) 폴더. 비우면 허브 JSON/CSV와 자동화 스크립트만 내보냅니다.</span><input class="in" data-f="icdTemplateDir" value="${esc((S as any).mil1553?.templateDir || '')}" placeholder="C:\\...\\1553 template project" spellcheck="false" style="font-family:var(--mono);font-size:11px;height:24px;padding:0 8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--panel);color:var(--text)"></div>
+    <div class="btns"><button class="pill h30 primary" data-b="ok">CLOSE</button></div></div></div>`);
+  dlg.addEventListener('change', e => { const t = e.target as HTMLInputElement; if (t.dataset.f === 'icdExport') bridge.call('setFeature', { name: 'icdExport', on: t.checked }); if (t.dataset.f === 'icdTemplateDir') bridge.call('setFeature', { name: 'icdTemplateDir', value: t.value }); });
+  dlg.addEventListener('click', e => { const t = e.target as HTMLElement; if ((t.closest('[data-b]') as HTMLElement | null)?.dataset.b === 'ok' || t === dlg) dlg.remove(); });
+  document.body.append(dlg);
+}
 
 // ---------- About (F1 / logo): version, beta notice, feedback link
 function showAbout() {
@@ -273,6 +292,9 @@ const test = {
   async tour(n = 0) { await help.startTour(n); await new Promise(r => setTimeout(r, 250)); await settle(); return !!document.querySelector('.tour-card'); },
   async help(section = 'start') { help.show(section); await new Promise(r => setTimeout(r, 100)); return !!document.querySelector('.help-pane'); },
   async mode(m: string) { setMode(m); await new Promise(r => setTimeout(r, 80)); await settle(); return true; },
+  // ---- 0.10.0
+  m1553() { return m1553.testApi(); },
+  async settings(on: boolean) { showSettings(); const cb = document.querySelector('.settings [data-f=icdExport]') as HTMLInputElement; if (cb.checked !== on) { cb.checked = on; cb.dispatchEvent(new Event('change', { bubbles: true })); } await new Promise(r => setTimeout(r, 120)); await settle(); document.querySelector('.modal-bg')?.remove(); return !!document.querySelector('[data-a=icdImport]') === on; },
   frameStats(chart: number) { const pv = this.plot(chart); return pv ? { frames: pv.frames, lastMs: pv.lastTotalMs, engineMs: pv.lastEngineMs, timings: pv.timings.slice(-60).map(t => t.t1 - t.t0) } : null; },
   async reportPage() { await report.refreshPage(); await new Promise(r => setTimeout(r, 100)); return !!report.el.querySelector('img')?.getAttribute('src'); },
   layout() { const g = (sel: string) => { const el = document.querySelector(sel) as HTMLElement | null; if (!el) return null; const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), font: cs.fontSize, bg: cs.backgroundColor, color: cs.color }; }; return { header: g('.hdr'), nav: g('.nav'), center: g('.center'), props: g('.props'), footer: g('.ftr'), chartHead: g('.chart-h'), plot: g('.plot-box'), modes: g('.modes'), search: g('.search'), rowFile: g('.row-file'), rowCh: g('.row-ch'), bigNum: g('.prop-big .num'), led: g('.led-pill') }; },

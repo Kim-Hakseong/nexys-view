@@ -38,6 +38,7 @@ export interface PageDto { id: number; name: string; columns: number; charts: nu
 export interface WindowDto { id: number; title: string; charts: number; }
 export interface TableDto { id: number; pageId: number; channels: { id: string; name: string; unit: string; length: number }[]; rows: number; cursorRow: number | null; }
 export interface State {
+  features?: { icdExport: boolean }; mil1553?: any;
   theme: string; plot: string; mode: string; developer: boolean; legacyTabs: boolean; dropMode: string;
   pages: PageDto[]; activePage: number; autoPage: { on: boolean; n: number }; windows: WindowDto[]; status: { text: string; led: string }; undo: { can: boolean; name: string | null; canRedo: boolean };
   files: FileDto[]; charts: ChartDto[]; sparks: Record<string, number[]>; activeChart: number; selected: string | null; selectedFile: string | null; selectedFiles: string[];
