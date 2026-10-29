@@ -13,7 +13,29 @@ namespace NexysView.App.Import;
 public static class PluginDataSource
 {
     public static string HostExe => Path.Combine(AppContext.BaseDirectory, "NexysView.PluginHost.exe");
-    public static string PythonMarshaller => @"C:\Program Files\the vendor\Shared\UsiCore\Bin\PythonMarshaller\PythonMarshaller.dll";
+    /// <summary>The Python DataPlugin marshaller of the installed DataPlugin runtime: &lt;vendor folder&gt;\Shared\UsiCore\Bin\PythonMarshaller\*PythonMarshaller.dll
+    /// under Program Files, located by shape (no vendor folder name in the source); "" when the runtime is not installed.</summary>
+    public static string PythonMarshaller => _pythonMarshaller ??= FindPythonMarshaller();
+    static string? _pythonMarshaller;
+    static string FindPythonMarshaller()
+    {
+        foreach (var pf in new[] { Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) })
+        {
+            if (string.IsNullOrEmpty(pf) || !Directory.Exists(pf)) continue;
+            foreach (var vendor in Directory.EnumerateDirectories(pf))
+            {
+                try
+                {
+                    string dir = Path.Combine(vendor, "Shared", "UsiCore", "Bin", "PythonMarshaller");
+                    if (!Directory.Exists(dir)) continue;
+                    var hit = Directory.EnumerateFiles(dir, "*PythonMarshaller.dll").FirstOrDefault();
+                    if (hit != null) return hit;
+                }
+                catch (Exception) { /* unreadable vendor folder: keep looking */ }
+            }
+        }
+        return "";
+    }
 
     public static DataFile Open(string dataFile, string pluginDll, string? paramXml = null, int timeoutMs = 120000)
     {
