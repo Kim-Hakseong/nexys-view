@@ -6,7 +6,7 @@ using NexysView.Core.Data;
 namespace NexysView.App.Import;
 
 /// <summary>
-/// Loads a file through an the vendor DataPlugin (public C++ SDK ABI: USP_TDM_MARSHALLER → IRoot) in a separate worker
+/// Loads a file through a DataPlugin (public C++ SDK ABI: USP_TDM_MARSHALLER → IRoot) in a separate worker
 /// process (NexysView.PluginHost.exe, from tools/dp_minihost). Known hosts: the Python marshaller (+ .py script) and any
 /// SDK-built plugin DLL. Invalid-value flags (0 = invalid) become NaN.
 /// </summary>

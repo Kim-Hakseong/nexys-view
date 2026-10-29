@@ -4,11 +4,11 @@
 
 **측정 데이터 뷰어 — TDMS·TDM·DXD 로그를 열고, 1,000만 샘플 곡선을 16 ms 안에 움직인다.** 버스 캡처(MIL-STD-1553 / ARINC 429)와 ICD는 자매 앱 **[NexysBus](https://github.com/Kim-Hakseong/nexys-bus)**가 맡는다.
 
-![version](https://img.shields.io/badge/version-1.0.0-7A1020) ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-17181A) ![runtime](https://img.shields.io/badge/.NET-8.0%20self--contained-5F5E5A) ![ui](https://img.shields.io/badge/UI-WebView2-5F5E5A)
+![version](https://img.shields.io/badge/version-1.0.1-7A1020) ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-17181A) ![runtime](https://img.shields.io/badge/.NET-8.0%20self--contained-5F5E5A) ![ui](https://img.shields.io/badge/UI-WebView2-5F5E5A)
 
 C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 렌더 · 단위 테스트 518개
 
-**1.0.0 (2026-10-29)**: rc.2 그대로, 회귀(`--v094` 23/23 · `--selftest` · `--stress 50` · NexysBus `--v0100` 14/14) 통과 후 정식 번호. **1.0.0-rc.2 — 저장소 분리**: 엔진(형식·플롯·셸 공통)은 [nexys-core](https://github.com/Kim-Hakseong/nexys-core) submodule(`app/core`)로 옮겨졌고, BUS 모드와 ICD 모듈은 **NexysBus**로 이사했다. `.mon`을 열면 "NexysBus에서 열기" 안내가 뜬다(설치돼 있으면 바로 넘긴다). 뷰어 자체는 1.0.0-rc와 같다: TDMS·TDM·DXD·CSV·DataPlugin, 그룹 드롭, 밴드·개요/상세, 페이지·여러 창, 값 테이블, 내보내기.
+**1.0.1 (2026-10-29)**: 1.0.0과 같은 뷰어. 저장소 소스로 빌드하면 .dxd를 못 열던 결함(내보내기 치환) 수정, DataPlugin 마샬러 경로 자동 탐색 — 소스 빌드는 이 태그부터. **1.0.0**: rc.2 그대로, 회귀(`--v094` 23/23 · `--selftest` · `--stress 50` · NexysBus `--v0100` 14/14) 통과 후 정식 번호. **1.0.0-rc.2 — 저장소 분리**: 엔진(형식·플롯·셸 공통)은 [nexys-core](https://github.com/Kim-Hakseong/nexys-core) submodule(`app/core`)로 옮겨졌고, BUS 모드와 ICD 모듈은 **NexysBus**로 이사했다. `.mon`을 열면 "NexysBus에서 열기" 안내가 뜬다(설치돼 있으면 바로 넘긴다). 뷰어 자체는 1.0.0-rc와 같다: TDMS·TDM·DXD·CSV·DataPlugin, 그룹 드롭, 밴드·개요/상세, 페이지·여러 창, 값 테이블, 내보내기.
 
 > ⚠️ 릴리스 후보입니다. 기능·화면·파일 형식이 바뀔 수 있습니다. 문제는 [GitHub Issues](https://github.com/Kim-Hakseong/nexys-view/issues)로 알려 주세요 (앱 안 `F1` → 정보 대화상자의 링크).
 
@@ -19,7 +19,7 @@ C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 렌더 �
 ## 설치와 실행
 
 ### 설치형 (권장)
-1. [Releases](https://github.com/Kim-Hakseong/nexys-view/releases)에서 `NexysView-1.0.0-setup.exe`를 받아 실행한다.
+1. [Releases](https://github.com/Kim-Hakseong/nexys-view/releases)에서 `NexysView-1.0.1-setup.exe`를 받아 실행한다.
 2. Program Files에 설치되고 시작 메뉴·바탕화면 바로가기가 만들어진다. `.tdms` / `.tdm` / `.dxd` 연결은 설치 중 선택(기본 해제).
 3. Microsoft Edge WebView2 런타임이 없는 PC에서는 설치 중에 자동으로 받아 설치한다(인터넷 필요). Windows 11과 최신 Windows 10에는 이미 들어 있다.
 
@@ -106,7 +106,7 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 - **형식**: TDMS(2.0, 세그먼트 10만 개 파일 포함) · TDM/TDX · CSV/TXT(자동 감지) · DXD · VBS/Python/SDK DataPlugin(`Ctrl+Shift+O`) · TDMS 저장(`Ctrl+S`) · 레이아웃 파일(.tdv) 가져오기.
 - **라이트/다크 테마**, 밝은 플롯(점 격자) 옵션, 창 크기·테마·모드·축/곡선 설정·필터 프리셋 복원(파일·차트는 다시 열지 않음), Undo/Redo.
 
-## 수치 (1.0.0, 같은 PC, 셀프테스트 측정 — 버스·ICD 수치는 NexysBus README)
+## 수치 (1.0.1, 같은 PC, 셀프테스트 측정 — 버스·ICD 수치는 NexysBus README)
 | 항목 | 값 | 관문 |
 |---|---|---|
 | 프로세스 시작 → 페이지 준비 | 1.9–2.6 s (3회) | ≤ 3 s |
@@ -154,7 +154,7 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 | 테이블 선택 복사 | 셀 드래그 → `Ctrl+C` |
 | 파일 비교 | 파일 행 `Ctrl`-클릭 → COMPARE |
 
-## 알려진 문제 (1.0.0)
+## 알려진 문제 (1.0.1)
 - 버스 캡처(.mon)는 이 앱이 열지 않는다 — 안내 창에서 NexysBus로 넘긴다(설치돼 있지 않으면 경로 안내만).
 - 시뮬레이터 프로젝트 내보내기는 템플릿 프로젝트 폴더(CDV + CPJ)가 있어야 하고, 필드의 비트 범위·타입·분해능만 쓴다(offset·단위·주기는 허브·XML에만). 자동화 스크립트는 시뮬레이터 COM이 감지될 때만 켜진다.
 - 커스텀 디바이스 XML은 공개 문서 기반 스키마로 만든다. 실제 시스템 로드는 아직 확인하지 않았다.

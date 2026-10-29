@@ -1,5 +1,5 @@
-// DataPlugin mini host for the public the vendor C++ DataPlugin SDK ABI (USP_TDM_MARSHALLER -> IRoot / IRootExport).
-// Independent of the reference tool: loads a plugin DLL, drives it through the SDK interfaces and dumps the result as JSON.
+// DataPlugin mini host for the public C++ DataPlugin SDK ABI (USP_TDM_MARSHALLER -> IRoot / IRootExport).
+// Independent of the reference tool/USI: loads a plugin DLL, drives it through the SDK interfaces and dumps the result as JSON.
 // Based on the SDK's tests/simple_read_test.cpp (MIT). Headers: ref/dataplugin-sdk-cpp/include.
 //   dp_minihost read   <plugin.dll> <datafile> <out.json> [param-xml]   (default param: <filename readonly="yes">datafile</filename>)
 //   dp_minihost export <plugin.dll> <outfile>  <param-xml> [init-param-xml]  (exports a fixed in-memory test tree)
@@ -301,7 +301,7 @@ struct MemRoot : RefBase<IRoot> {
   HRESULT GetDate(DATE& d) const override { d = 45000.5; return S_OK; }
 };
 
-// fixed test tree (same values are created in 기준 도구 by work/reference_scripts/export_ref.vbs)
+// fixed test tree (same values are created in the reference tool by work/reference_scripts/export_ref.vbs)
 static MemRoot* BuildTree()
 {
   MemRoot* r = new MemRoot();

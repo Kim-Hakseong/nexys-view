@@ -9,7 +9,7 @@ using NexysView.Core.Data;
 namespace NexysView.App.Plugins;
 
 /// <summary>
-/// VBS DataPlugin host — the subset of the 기준 도구 DataPlugin object model (the DataPlugin typelib typelib, DataPlugin.chm)
+/// VBS DataPlugin host — the subset of the DataPlugin object model (the DataPlugin typelib, DataPlugin.chm)
 /// used by the tutorial examples: Root(Properties, ChannelGroups), ChannelGroup(Channels.AddImplicitChannel /
 /// AddDirectAccessChannel), File(Formatter, GetNextStringValue, SkipLine, SkipValue, Position, Size, GetStringBlock,
 /// GetBinaryBlock), StringBlock/BinaryBlock(Channels.Add, Position, ByteOrder). Values are materialized after ReadStore.

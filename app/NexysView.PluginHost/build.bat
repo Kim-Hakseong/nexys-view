@@ -1,5 +1,5 @@
 @echo off
-rem Builds NexysView.PluginHost.exe (public the vendor DataPlugin SDK ABI worker, see tools/dp_minihost) -> app\NexysView.PluginHost\bin\
+rem Builds NexysView.PluginHost.exe (public DataPlugin SDK ABI worker, see tools/dp_minihost) -> app\NexysView.PluginHost\bin\
 call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64 >nul || exit /b 1
 set HERE=%~dp0
 set SDK=%HERE%..\..\ref\dataplugin-sdk-cpp

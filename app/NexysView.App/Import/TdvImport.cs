@@ -6,7 +6,7 @@ using NexysView.Core.Data;
 namespace NexysView.App.Import;
 
 /// <summary>
-/// the reference tool VIEW layout (.tdv, model DataModels/기준 도구/View/2_6, docs/findings.md) → charts/tables in the VIEW canvas.
+/// The reference tool's VIEW layout (.tdv, model DataModels/<tool>/View/2_6, docs/findings.md) → charts/tables in the VIEW canvas.
 /// SHEET → AREAS → SPLITTER chain → AREA{DisplayTyp 0 = 2D chart, 1 = channel table}; AREA.DisplayObjectShared →
 /// SHAREDDATA.SharedChannelList → SHAREDCHANNELDATA{KanalExtName "[g]/Name", Kanalindex, CurveData → SHAREDCURVEDATA.ReferenceChannel (x)}.
 /// Channels are resolved against the open files by "[group index]/name" or name.

@@ -85,7 +85,7 @@ public static partial class SelfTest
         var e = w.Engine;
         e.Theme = Arg("--theme", "light"); e.Plot = Arg("--plot", "dark");
         foreach (var f in ArgAll("--open")) e.OpenFile(f);
-        if (Arg("--scene") is "timelog" or "timelog") { await TimeLogScene(w); await Shot(w, Arg("--name", "shot")); if (Arg("--probe") == "1") await Probe(w, Arg("--name", "shot")); return; }
+        if (Arg("--scene") is "timelog") { await TimeLogScene(w); await Shot(w, Arg("--name", "shot")); if (Arg("--probe") == "1") await Probe(w, Arg("--name", "shot")); return; }
         int n = int.Parse(Arg("--curves", "3"));
         var chans = e.State.Files.SelectMany(f => f.AllChannels).Where(c => !c.IsText).Take(n).ToList();
         if (chans.Count > 0)
