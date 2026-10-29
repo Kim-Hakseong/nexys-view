@@ -2,13 +2,13 @@
 
 # Nexys VIEW
 
-**측정 데이터 뷰어 — TDMS·TDM·DXD 로그를 열고, 1,000만 샘플 곡선을 16 ms 안에 움직인다.** 버스 캡처(MIL-STD-1553 / ARINC 429)와 ICD는 자매 앱 **[NexysBus](https://github.com/Kim-Hakseong/nexys-bus)**가 맡는다.
+**측정 데이터 뷰어 — TDMS·TDM·DXD·MDF(MF4) 로그를 열고, 1,000만 샘플 곡선을 16 ms 안에 움직인다.** 버스 캡처(MIL-STD-1553 / ARINC 429)와 ICD는 자매 앱 **[NexysBus](https://github.com/Kim-Hakseong/nexys-bus)**가 맡는다.
 
-![version](https://img.shields.io/badge/version-1.0.1-7A1020) ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-17181A) ![runtime](https://img.shields.io/badge/.NET-8.0%20self--contained-5F5E5A) ![ui](https://img.shields.io/badge/UI-WebView2-5F5E5A)
+![version](https://img.shields.io/badge/version-1.1.0--beta.1-7A1020) ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-17181A) ![runtime](https://img.shields.io/badge/.NET-8.0%20self--contained-5F5E5A) ![ui](https://img.shields.io/badge/UI-WebView2-5F5E5A)
 
-C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 렌더 · 단위 테스트 518개
+C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 렌더 · 단위 테스트 546개
 
-**1.0.1 (2026-10-29)**: 1.0.0과 같은 뷰어. 저장소 소스로 빌드하면 .dxd를 못 열던 결함(내보내기 치환) 수정, DataPlugin 마샬러 경로 자동 탐색 — 소스 빌드는 이 태그부터. **1.0.0**: rc.2 그대로, 회귀(`--v094` 23/23 · `--selftest` · `--stress 50` · NexysBus `--v0100` 14/14) 통과 후 정식 번호. **1.0.0-rc.2 — 저장소 분리**: 엔진(형식·플롯·셸 공통)은 [nexys-core](https://github.com/Kim-Hakseong/nexys-core) submodule(`app/core`)로 옮겨졌고, BUS 모드와 ICD 모듈은 **NexysBus**로 이사했다. `.mon`을 열면 "NexysBus에서 열기" 안내가 뜬다(설치돼 있으면 바로 넘긴다). 뷰어 자체는 1.0.0-rc와 같다: TDMS·TDM·DXD·CSV·DataPlugin, 그룹 드롭, 밴드·개요/상세, 페이지·여러 창, 값 테이블, 내보내기.
+**1.1.0-beta.1 (2026-10-29) — MDF**: ASAM MDF 3.x / 4.x(`.mf4` `.mdf` `.dat`) 읽기 — 정렬·비정렬 레코드, 비트 패킹, 압축(deflate·transposed), 변환(linear·rational·수식·표·범위·값→텍스트), 무효 비트, VLSD 텍스트, 구조체·CA 배열, CAN 버스 로깅 원시 채널. 정답지 비트 대조 281/281, 1 GB 파일 첫 화면 ≤ 1.8 s. 베타: 실제 로거 파일 검증 전(아래 지원 형식 표). **1.0.1 (2026-10-29)**: 1.0.0과 같은 뷰어. 저장소 소스로 빌드하면 .dxd를 못 열던 결함(내보내기 치환) 수정, DataPlugin 마샬러 경로 자동 탐색 — 소스 빌드는 이 태그부터. **1.0.0**: rc.2 그대로, 회귀(`--v094` 23/23 · `--selftest` · `--stress 50` · NexysBus `--v0100` 14/14) 통과 후 정식 번호. **1.0.0-rc.2 — 저장소 분리**: 엔진(형식·플롯·셸 공통)은 [nexys-core](https://github.com/Kim-Hakseong/nexys-core) submodule(`app/core`)로 옮겨졌고, BUS 모드와 ICD 모듈은 **NexysBus**로 이사했다. `.mon`을 열면 "NexysBus에서 열기" 안내가 뜬다(설치돼 있으면 바로 넘긴다). 뷰어 자체는 1.0.0-rc와 같다: TDMS·TDM·DXD·CSV·DataPlugin, 그룹 드롭, 밴드·개요/상세, 페이지·여러 창, 값 테이블, 내보내기.
 
 > ⚠️ 릴리스 후보입니다. 기능·화면·파일 형식이 바뀔 수 있습니다. 문제는 [GitHub Issues](https://github.com/Kim-Hakseong/nexys-view/issues)로 알려 주세요 (앱 안 `F1` → 정보 대화상자의 링크).
 
@@ -19,8 +19,8 @@ C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 렌더 �
 ## 설치와 실행
 
 ### 설치형 (권장)
-1. [Releases](https://github.com/Kim-Hakseong/nexys-view/releases)에서 `NexysView-1.0.1-setup.exe`를 받아 실행한다.
-2. Program Files에 설치되고 시작 메뉴·바탕화면 바로가기가 만들어진다. `.tdms` / `.tdm` / `.dxd` 연결은 설치 중 선택(기본 해제).
+1. [Releases](https://github.com/Kim-Hakseong/nexys-view/releases)에서 `NexysView-1.1.0-beta.1-setup.exe`를 받아 실행한다.
+2. Program Files에 설치되고 시작 메뉴·바탕화면 바로가기가 만들어진다. `.tdms` / `.tdm` / `.dxd` / `.mf4` / `.mdf` 연결은 설치 중 선택(기본 해제).
 3. Microsoft Edge WebView2 런타임이 없는 PC에서는 설치 중에 자동으로 받아 설치한다(인터넷 필요). Windows 11과 최신 Windows 10에는 이미 들어 있다.
 
 ### 포터블
@@ -103,7 +103,7 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 - **탐색 도구에 집중**: 툴바 첫 그룹은 NAVIGATOR · VIEW. 그룹 드롭 → 차트, 오른쪽 드래그 줌, 밴드 커서, 개요/상세 연동, X축 링크, 값 테이블, CSV/TDMS/PNG 내보내기, **페이지**와 **여러 창**. (ANALYSIS·REPORT 탭은 설정의 legacy 스위치로만 표시)
 - **시간축 로그**: `System Time`/`Absolute Time` 같은 시간 채널 자동 인식 → 시간축 제안(USE … AS X), 상대/절대 시각 눈금, 계단 신호 + 디지털 레인, 이름 계층 트리(`A.B.C`), 로그 여러 개를 시작 시각으로 정렬해 비교.
 - **버스 캡처**: NexysBus로 이사(1.0.0-rc.2). `.mon`을 열면 안내 → NexysBus 실행.
-- **형식**: TDMS(2.0, 세그먼트 10만 개 파일 포함) · TDM/TDX · CSV/TXT(자동 감지) · DXD · VBS/Python/SDK DataPlugin(`Ctrl+Shift+O`) · TDMS 저장(`Ctrl+S`) · 레이아웃 파일(.tdv) 가져오기.
+- **형식**: TDMS(2.0, 세그먼트 10만 개 파일 포함) · TDM/TDX · CSV/TXT(자동 감지) · DXD · MDF 3.x/4.x(MF4; 값→텍스트 채널은 계단 곡선 + 커서 표·PROPERTIES에 텍스트) · VBS/Python/SDK DataPlugin(`Ctrl+Shift+O`) · TDMS 저장(`Ctrl+S`) · 레이아웃 파일(.tdv) 가져오기.
 - **라이트/다크 테마**, 밝은 플롯(점 격자) 옵션, 창 크기·테마·모드·축/곡선 설정·필터 프리셋 복원(파일·차트는 다시 열지 않음), Undo/Redo.
 
 ## 수치 (1.0.1, 같은 PC, 셀프테스트 측정 — 버스·ICD 수치는 NexysBus README)
@@ -118,8 +118,13 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 | DXD·설정·도움말 셀프테스트 후 Working Set | 198 MB | ≤ 600 MB |
 | 스트레스 50회(TDMS·DXD·MON 혼합, 창 12개) UI 정지 300 ms · 메모리 증가 | 0 · +23 MB | 0 · ≤ 100 MB |
 | 강조색 테두리·띠 (accent 스캔) | 0 | 0 |
+| 1 GB MDF 열기 — 비압축 / deflate (50 ch × 2.6M, 1.1.0-beta.1) | 39 ms / 315 ms | ≤ 500 / ≤ 1,000 ms |
+| 1 GB MDF 첫 화면(10곡선 피라미드, 캐시 없음) — 비압축 / deflate | 1.74 s / 1.39 s | ≤ 2 s |
+| 1 GB MDF 10곡선 팬·줌 프레임 중앙값 | 5.8 / 8.3 ms | ≤ 16 ms |
+| 2,000채널 MDF 열기 + NAVIGATOR | 113 ms | ≤ 300 ms |
+| MDF 정답지 비트 대조(21파일, asammdf 기준) | 281/281 | 전부 |
 
-측정 방법·원본 수치: [docs/rc2-report.md](docs/rc2-report.md), [docs/100rc-report.md](docs/100rc-report.md), [docs/094-report.md](docs/094-report.md), [docs/093-report.md](docs/093-report.md), [docs/webview-report.md](docs/webview-report.md), [docs/v3-report.md](docs/v3-report.md).
+측정 방법·원본 수치: [docs/mf4/report-mf4.md](docs/mf4/report-mf4.md), [docs/rc2-report.md](docs/rc2-report.md), [docs/100rc-report.md](docs/100rc-report.md), [docs/094-report.md](docs/094-report.md), [docs/093-report.md](docs/093-report.md), [docs/webview-report.md](docs/webview-report.md), [docs/v3-report.md](docs/v3-report.md).
 
 ## 지원 형식
 | 형식 | 읽기 | 쓰기 | 비고 |
@@ -128,6 +133,7 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 | .tdm / .tdx | ✅ | — | raw_linear · implicit_linear · string_sequence |
 | .csv / .txt / .xyz | ✅ | — | 구분자·헤더 자동 감지 |
 | .dxd | ✅ | — | 멀티레이트·IEEE 32/64, 저장소 빌드 포함 |
+| .mf4 / .mdf / .dat (ASAM MDF) | ✅ 베타 | — | 4.00–4.11 전체 블록(4.2는 4.1 집합으로, LD 열 저장 제외) · 3.0–3.3 · 정렬/비정렬 · DZ deflate/transposed · 비트 패킹·BE · 변환 LIN/RAT/ALG/TABI/TAB/RTAB/TABX/RTABX · 무효 비트→NaN · VLSD 텍스트 · 구조체·CA(CN 템플릿) · 바이트 배열 ≤64 B 원소 · CAN 로깅 원시 채널 · AT/EV 목록. 미지원: CA storage 1/2·축, 비정렬 VLSD, TTAB/TRANS/BITFIELD, 3.x BE 헤더 |
 | DataPlugin (.vbs / .py / .dll) | ✅ | — | VBS 객체 모델 부분집합, Python 마셜러 워커, C++ SDK DLL |
 | .mon (MIL-STD-1553 / ARINC 429 캡처) | → NexysBus | — | 열면 "NexysBus에서 열기" 안내 |
 | .tdv | ✅ | — | VIEW 레이아웃 → 차트·테이블 |
@@ -154,7 +160,8 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 | 테이블 선택 복사 | 셀 드래그 → `Ctrl+C` |
 | 파일 비교 | 파일 행 `Ctrl`-클릭 → COMPARE |
 
-## 알려진 문제 (1.0.1)
+## 알려진 문제 (1.1.0-beta.1)
+- MDF: 생성 도구(asammdf)와 자체 라이터로 만든 파일로만 검증했다 — 실제 로거(벤더) 파일은 다음 베타에서. 압축 파일은 레코드를 메모리에 풀어 두므로(RAM/4, 최대 3 GB 예산) 1 GB 파일을 열면 프로세스 메모리 ~2.5 GB. 채널 하나를 읽어도 그룹 레코드 전체를 훑는 형식 구조라 첫 화면은 파일 크기에 비례한다. DBC 디코드·MDF 저장은 아직 없다.
 - 버스 캡처(.mon)는 이 앱이 열지 않는다 — 안내 창에서 NexysBus로 넘긴다(설치돼 있지 않으면 경로 안내만).
 - 시뮬레이터 프로젝트 내보내기는 템플릿 프로젝트 폴더(CDV + CPJ)가 있어야 하고, 필드의 비트 범위·타입·분해능만 쓴다(offset·단위·주기는 허브·XML에만). 자동화 스크립트는 시뮬레이터 COM이 감지될 때만 켜진다.
 - 커스텀 디바이스 XML은 공개 문서 기반 스키마로 만든다. 실제 시스템 로드는 아직 확인하지 않았다.
@@ -176,7 +183,7 @@ app/
   NexysView.Render/   차트 모델, 눈금, 시간축, 보고서(Skia)
   NexysView.App/      WPF 창 + WebView2 호스트, Engine(EngineBase + 분석·보고서·.tdv·내보내기), 가져오기/내보내기, 플러그인, 셀프테스트
   NexysView.PluginHost/  C++ DataPlugin 워커(SDK DLL·Python 마셜러)
-  NexysView.Tests/    xUnit (DXD 정답지 비트 일치 포함; 관문 테스트는 로컬 기준 데이터가 필요해 저장소에서는 제외)
+  NexysView.Tests/    xUnit (DXD·MDF 정답지 비트 일치 포함 — data/mdf 샘플 21개 + 생성 스크립트; 관문 테스트는 로컬 기준 데이터가 필요해 저장소에서는 제외)
   web/                페이지 (Vite + TypeScript, 프레임워크 없음): main · nav · view · settings · help ; bridge·plot·icons·util·types는 @core
 design/               목업(정답 화면: view · navigator · bus · icd · settings …)·디자인 문서·브랜드
 installer/            Inno Setup 스크립트, 라이선스 텍스트

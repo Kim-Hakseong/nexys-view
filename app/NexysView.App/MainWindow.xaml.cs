@@ -130,7 +130,7 @@ public partial class MainWindow : Window
             case "window.list": return Windows.Values.Select(w => new { id = w.Id, title = w.Title, x = w.Rect.X, y = w.Rect.Y, w = w.Rect.Width, h = w.Rect.Height }).ToList();
             case "openDialog":
                 {
-                    var dlg = new OpenFileDialog { Filter = "Measurement data|*.tdms;*.tdm;*.dxd;*.csv;*.txt;*.xyz;*.tdv|TDMS|*.tdms|TDM|*.tdm|DXD|*.dxd|CSV|*.csv;*.txt|VIEW layout|*.tdv|All|*.*", Multiselect = true };
+                    var dlg = new OpenFileDialog { Filter = "Measurement data|*.tdms;*.tdm;*.dxd;*.mf4;*.mdf;*.dat;*.csv;*.txt;*.xyz;*.tdv|TDMS|*.tdms|TDM|*.tdm|DXD|*.dxd|MDF|*.mf4;*.mdf;*.dat|CSV|*.csv;*.txt|VIEW layout|*.tdv|All|*.*", Multiselect = true };
                     if (dlg.ShowDialog(this) == true) foreach (var f in dlg.FileNames) Engine.OpenFile(f);
                     return null;
                 }

@@ -1,8 +1,8 @@
 ; Nexys VIEW — Inno Setup script (beta.md §2). Build: ISCC.exe installer\NexysView.iss
 ; Input: ..\app\dist\app\* (dotnet publish, self-contained win-x64), bootstrapper MicrosoftEdgeWebview2Setup.exe in installer\redist\
 #define MyAppName "Nexys VIEW"
-#define MyAppVersion "1.0.1"
-#define MyAppVersionText "1.0.1"
+#define MyAppVersion "1.1.0-beta.1"
+#define MyAppVersionText "1.1.0 beta 1"
 #define MyAppPublisher "Nexys"
 #define MyAppExeName "NexysView.exe"
 #define MyAppUrl "https://github.com/Kim-Hakseong/nexys-view"
@@ -31,7 +31,7 @@ PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=commandline dialog
 ChangesAssociations=yes
 LicenseFile=..\installer\LICENSE.txt
-VersionInfoVersion=1.0.0.2
+VersionInfoVersion=1.1.0.0
 VersionInfoProductTextVersion={#MyAppVersionText}
 MinVersion=10.0
 
@@ -44,6 +44,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "assoc_tdms"; Description: ".tdms 파일을 {#MyAppName}으로 열기"; GroupDescription: "파일 연결 (선택):"; Flags: unchecked
 Name: "assoc_tdm"; Description: ".tdm 파일을 {#MyAppName}으로 열기"; GroupDescription: "파일 연결 (선택):"; Flags: unchecked
 Name: "assoc_dxd"; Description: ".dxd 파일을 {#MyAppName}으로 열기"; GroupDescription: "파일 연결 (선택):"; Flags: unchecked
+Name: "assoc_mf4"; Description: ".mf4 / .mdf 파일을 {#MyAppName}으로 열기"; GroupDescription: "파일 연결 (선택):"; Flags: unchecked
 
 [Files]
 Source: "..\app\dist\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -69,6 +70,14 @@ Root: HKA; Subkey: "Software\Classes\.dxd\OpenWithProgids"; ValueType: string; V
 Root: HKA; Subkey: "Software\Classes\NexysView.dxd"; ValueType: string; ValueName: ""; ValueData: "DXD measurement file"; Flags: uninsdeletekey; Tasks: assoc_dxd
 Root: HKA; Subkey: "Software\Classes\NexysView.dxd\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"; Tasks: assoc_dxd
 Root: HKA; Subkey: "Software\Classes\NexysView.dxd\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Tasks: assoc_dxd
+Root: HKA; Subkey: "Software\Classes\.mf4\OpenWithProgids"; ValueType: string; ValueName: "NexysView.mf4"; ValueData: ""; Flags: uninsdeletevalue; Tasks: assoc_mf4
+Root: HKA; Subkey: "Software\Classes\NexysView.mf4"; ValueType: string; ValueName: ""; ValueData: "MDF measurement file"; Flags: uninsdeletekey; Tasks: assoc_mf4
+Root: HKA; Subkey: "Software\Classes\NexysView.mf4\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"; Tasks: assoc_mf4
+Root: HKA; Subkey: "Software\Classes\NexysView.mf4\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Tasks: assoc_mf4
+Root: HKA; Subkey: "Software\Classes\.mdf\OpenWithProgids"; ValueType: string; ValueName: "NexysView.mdf"; ValueData: ""; Flags: uninsdeletevalue; Tasks: assoc_mf4
+Root: HKA; Subkey: "Software\Classes\NexysView.mdf"; ValueType: string; ValueName: ""; ValueData: "MDF measurement file"; Flags: uninsdeletekey; Tasks: assoc_mf4
+Root: HKA; Subkey: "Software\Classes\NexysView.mdf\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"; Tasks: assoc_mf4
+Root: HKA; Subkey: "Software\Classes\NexysView.mdf\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Tasks: assoc_mf4
 
 [Run]
 ; WebView2 Evergreen runtime: installed silently when missing (bootstrapper downloads the current runtime)

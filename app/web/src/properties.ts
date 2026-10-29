@@ -34,7 +34,7 @@ export class Properties {
     const when = p.valueWhen ? ` <span>· ${esc(p.valueWhen)}</span>` : '';
     const delta = p.valueB != null && p.value != null ? `<span class="delta">Δ ${fmtSigned(p.valueB - p.value)} to B</span>` : '';
     const min = p.min ?? 0, max = p.max ?? 0;
-    const big = p.isText ? '' : `<div class="prop-big"><div class="lbl">${esc(p.valueLabel)}${when}</div><div class="val"><span class="num">${p.value == null ? '—' : fmtRead(p.value)}</span><span class="unit">${esc(p.unit)}</span>${delta}</div>
+    const big = p.isText ? '' : `<div class="prop-big"><div class="lbl">${esc(p.valueLabel)}${when}</div><div class="val"><span class="num">${p.value == null ? '—' : p.valueText ? esc(p.valueText) : fmtRead(p.value)}</span><span class="unit">${esc(p.unit)}</span>${delta}</div>
       <div class="bar">${p.ready ? rangeBarSvg(min, max, p.value, p.band) : ''}</div><div class="ends"><span>min ${p.ready ? fmtValue(min, 4) : '…'}</span><span class="c">${p.band ? 'A–B range' : 'range'}</span><span>max ${p.ready ? fmtValue(max, 4) : '…'}</span></div></div>`;
     const data = kv('samples', fmtInt(p.length)) + kv('type', p.dataType || '—') + kv('unit', p.unit || '—') + kv('x channel', p.xChannel ?? '') + kv('rate', p.rate ? fmtValue(p.rate, 4) + ' Hz' : '') + kv('render', p.render) + (p.description ? kv('description', p.description, true) : '');
     const time = (p.wfStart ? kv('wf_start_time', p.wfStart) : '') + (p.absolute != null ? kv('absolute', p.absolute.toExponential(3).replace('e+', 'E') + ' s') : '') + (chart ? kv('display', p.display) : '');
