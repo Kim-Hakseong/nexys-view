@@ -16,8 +16,8 @@ export class NavMode {
     const samples = S.files.reduce((a, f) => a + f.samples, 0);
     this.meta.textContent = S.files.length ? `${S.files.length} file${S.files.length !== 1 ? 's' : ''} · ${fmtInt(samples)} samples` : '';
     const nSel = S.selectedFiles.length >= 2 ? S.selectedFiles.length : S.files.length;
-    const actions = `<div class="ds-actions"><button class="pill h32 primary" data-a="open">${I.folderW()}OPEN FILE</button><button class="pill h32" data-a="plugin">OPEN WITH DATAPLUGIN</button>${S.files.length >= 2 ? `<button class="pill h32" data-a="compare">COMPARE ${nSel} FILES</button>` : ''}<span class="hint">Drop .tdms / .tdm / .dxd / .csv anywhere</span></div>`;
-    const cards = S.files.map(f => `<div class="ds-card${S.selectedFile === f.name || S.selectedFiles.includes(f.name) ? ' sel' : ''}" data-file="${esc(f.name)}"><span class="ic">${I.db(18)}</span><div class="body"><div class="nm"><b>${esc(f.name.replace(/\.[^.]+$/, ''))}</b><span class="chip">${esc(f.format)}</span>${f.warnings ? `<span class="chip" style="color:var(--amber)">${f.warnings} warn</span>` : ''}</div><div class="path">${esc(f.dir)}\\…${f.startText ? `  ·  ${esc(f.startText.slice(0, 16))}` : ''}${f.duration != null ? ` · ${f.duration.toFixed(1)} s` : ''}</div></div>
+    const actions = `<div class="ds-actions"><button class="pill h32 primary" data-a="open">${I.folderW()}OPEN FILE</button><button class="pill h32" data-a="plugin">OPEN WITH DATAPLUGIN</button>${S.files.length >= 2 ? `<button class="pill h32" data-a="compare">COMPARE ${nSel} FILES</button>` : ''}<span class="hint">Drop .tdms / .tdm / .dxd / .mf4 / .csv anywhere</span></div>`;
+    const cards = S.files.map(f => `<div class="ds-card${S.selectedFile === f.name || S.selectedFiles.includes(f.name) ? ' sel' : ''}" data-file="${esc(f.name)}"><span class="ic">${I.db(18)}</span><div class="body"><div class="nm"><b>${esc(f.name.replace(/\.[^.]+$/, ''))}</b><span class="chip">${esc(f.format)}</span>${f.warnings ? `<span class="chip" style="color:var(--amber)">${f.warnings} warn</span>` : ''}${f.format === 'CSV' ? `<button class="pill ds-import" data-import="${esc(f.name)}" title="가져오기 설정(구분자·소수점·헤더·시간 열)으로 다시 열기">IMPORT…</button>` : ''}</div><div class="path">${esc(f.dir)}\\…${f.startText ? `  ·  ${esc(f.startText.slice(0, 16))}` : ''}${f.duration != null ? ` · ${f.duration.toFixed(1)} s` : ''}</div></div>
       <div class="nums"><div><div class="k">CHANNELS</div><div class="v">${f.channelCount}</div></div><div><div class="k">SAMPLES</div><div class="v">${fmtInt(f.samples)}</div></div><div><div class="k">SIZE</div><div class="v">${f.sizeBytes ? fmtBytes(f.sizeBytes) : '—'}</div></div><div><div class="k">OPEN</div><div class="v g">${f.openMs.toFixed(0)} ms</div></div></div>
       <button class="xbtn" aria-label="Close file" data-close="${esc(f.name)}">${I.close()}</button></div>`).join('');
     const common = S.common.length, total = S.files[0]?.channelCount ?? 0;
@@ -30,6 +30,7 @@ export class NavMode {
   private onClick(e: MouseEvent) {
     const t = e.target as HTMLElement; const S = this.S!;
     const close = (t.closest('[data-close]') as HTMLElement | null)?.dataset.close; if (close) { bridge.call('closeFile', { name: close }); return; }
+    const imp = (t.closest('[data-import]') as HTMLElement | null)?.dataset.import; if (imp) { bridge.call('csv.review', { name: imp }); return; }
     const a = (t.closest('[data-a]') as HTMLElement | null)?.dataset.a;
     if (a === 'open') { bridge.call('openDialog'); return; }
     if (a === 'plugin') { bridge.call('openPluginDialog'); return; }

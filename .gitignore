@@ -13,6 +13,8 @@ installer/redist/
 *.dll
 *.exe
 *.lib
+# documents a person may drop into the clone are never part of the export
+*.pdf
 # local data and caches
 *.nvcache
 work/

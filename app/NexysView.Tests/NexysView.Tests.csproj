@@ -21,5 +21,6 @@
   <ItemGroup>
     <None Include="data\dxd\*" CopyToOutputDirectory="PreserveNewest" LinkBase="data\dxd" />
     <None Include="data\mdf\*.mf4;data\mdf\*.mdf;data\mdf\*.truth.json" CopyToOutputDirectory="PreserveNewest" LinkBase="data\mdf" />
+    <None Include="data\csv\*.csv;data\csv\*.truth.json" CopyToOutputDirectory="PreserveNewest" LinkBase="data\csv" />
   </ItemGroup>
 </Project>

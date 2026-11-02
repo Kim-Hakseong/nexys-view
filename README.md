@@ -4,11 +4,11 @@
 
 **측정 데이터 뷰어 — TDMS·TDM·DXD·MDF(MF4) 로그를 열고, 1,000만 샘플 곡선을 16 ms 안에 움직인다.** 버스 캡처(MIL-STD-1553 / ARINC 429)와 ICD는 자매 앱 **[NexysBus](https://github.com/Kim-Hakseong/nexys-bus)**가 맡는다.
 
-![version](https://img.shields.io/badge/version-1.1.0--beta.1-7A1020) ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-17181A) ![runtime](https://img.shields.io/badge/.NET-8.0%20self--contained-5F5E5A) ![ui](https://img.shields.io/badge/UI-WebView2-5F5E5A)
+![version](https://img.shields.io/badge/version-1.1.0--beta.2-7A1020) ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-17181A) ![runtime](https://img.shields.io/badge/.NET-8.0%20self--contained-5F5E5A) ![ui](https://img.shields.io/badge/UI-WebView2-5F5E5A)
 
-C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 렌더 · 단위 테스트 546개
+C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 렌더 · 단위 테스트 575개
 
-**1.1.0-beta.1 (2026-10-29) — MDF**: ASAM MDF 3.x / 4.x(`.mf4` `.mdf` `.dat`) 읽기 — 정렬·비정렬 레코드, 비트 패킹, 압축(deflate·transposed), 변환(linear·rational·수식·표·범위·값→텍스트), 무효 비트, VLSD 텍스트, 구조체·CA 배열, CAN 버스 로깅 원시 채널. 정답지 비트 대조 281/281, 1 GB 파일 첫 화면 ≤ 1.8 s. 베타: 실제 로거 파일 검증 전(아래 지원 형식 표). **1.0.1 (2026-10-29)**: 1.0.0과 같은 뷰어. 저장소 소스로 빌드하면 .dxd를 못 열던 결함(내보내기 치환) 수정, DataPlugin 마샬러 경로 자동 탐색 — 소스 빌드는 이 태그부터. **1.0.0**: rc.2 그대로, 회귀(`--v094` 23/23 · `--selftest` · `--stress 50` · NexysBus `--v0100` 14/14) 통과 후 정식 번호. **1.0.0-rc.2 — 저장소 분리**: 엔진(형식·플롯·셸 공통)은 [nexys-core](https://github.com/Kim-Hakseong/nexys-core) submodule(`app/core`)로 옮겨졌고, BUS 모드와 ICD 모듈은 **NexysBus**로 이사했다. `.mon`을 열면 "NexysBus에서 열기" 안내가 뜬다(설치돼 있으면 바로 넘긴다). 뷰어 자체는 1.0.0-rc와 같다: TDMS·TDM·DXD·CSV·DataPlugin, 그룹 드롭, 밴드·개요/상세, 페이지·여러 창, 값 테이블, 내보내기.
+**1.1.0-beta.2 (2026-11-02) — CSV 가져오기**: 인코딩(UTF-8·BOM·CP949·UTF-16)·구분자(`,` `;` 탭 `|` 공백)·소수점·전문/이름/단위 줄·시간 열(초 단위 또는 타임스탬프) 자동 감지, 확신이 낮거나 파일이 크면(2 GB 초과 또는 예상 메모리 > RAM의 1/4, 캐시가 있으면 제외) 가져오기 대화상자(미리보기 20행, 설정을 바꾸면 즉시 갱신, 파일별 설정 기억 `<파일>.nvimport.json`, 폴더가 읽기 전용이면 `%LOCALAPPDATA%\NexysView\import`), 파일 카드 IMPORT…로 설정 바꿔 다시 열기. 병렬 파싱(1 GB 첫 열기 2.4–4.1 s, 백그라운드·진행률) + 바이너리 캐시(재열기 0.08–0.24 s). **1.1.0-beta.1 (2026-10-29) — MDF**: ASAM MDF 3.x / 4.x(`.mf4` `.mdf` `.dat`) 읽기 — 정렬·비정렬 레코드, 비트 패킹, 압축(deflate·transposed), 변환(linear·rational·수식·표·범위·값→텍스트), 무효 비트, VLSD 텍스트, 구조체·CA 배열, CAN 버스 로깅 원시 채널. 정답지 비트 대조 281/281, 1 GB 파일 첫 화면 ≤ 1.8 s. 베타: 실제 로거 파일 검증 전(아래 지원 형식 표). **1.0.1 (2026-10-29)**: 1.0.0과 같은 뷰어. 저장소 소스로 빌드하면 .dxd를 못 열던 결함(내보내기 치환) 수정, DataPlugin 마샬러 경로 자동 탐색 — 소스 빌드는 이 태그부터. **1.0.0**: rc.2 그대로, 회귀(`--v094` 23/23 · `--selftest` · `--stress 50` · NexysBus `--v0100` 14/14) 통과 후 정식 번호. **1.0.0-rc.2 — 저장소 분리**: 엔진(형식·플롯·셸 공통)은 [nexys-core](https://github.com/Kim-Hakseong/nexys-core) submodule(`app/core`)로 옮겨졌고, BUS 모드와 ICD 모듈은 **NexysBus**로 이사했다. `.mon`을 열면 "NexysBus에서 열기" 안내가 뜬다(설치돼 있으면 바로 넘긴다). 뷰어 자체는 1.0.0-rc와 같다: TDMS·TDM·DXD·CSV·DataPlugin, 그룹 드롭, 밴드·개요/상세, 페이지·여러 창, 값 테이블, 내보내기.
 
 > ⚠️ 릴리스 후보입니다. 기능·화면·파일 형식이 바뀔 수 있습니다. 문제는 [GitHub Issues](https://github.com/Kim-Hakseong/nexys-view/issues)로 알려 주세요 (앱 안 `F1` → 정보 대화상자의 링크).
 
@@ -19,7 +19,7 @@ C# 12 / .NET 8 · WPF 창 + WebView2 페이지(TypeScript) · SkiaSharp 렌더 �
 ## 설치와 실행
 
 ### 설치형 (권장)
-1. [Releases](https://github.com/Kim-Hakseong/nexys-view/releases)에서 `NexysView-1.1.0-beta.1-setup.exe`를 받아 실행한다.
+1. [Releases](https://github.com/Kim-Hakseong/nexys-view/releases)에서 `NexysView-1.1.0-beta.2-setup.exe`를 받아 실행한다.
 2. Program Files에 설치되고 시작 메뉴·바탕화면 바로가기가 만들어진다. `.tdms` / `.tdm` / `.dxd` / `.mf4` / `.mdf` 연결은 설치 중 선택(기본 해제).
 3. Microsoft Edge WebView2 런타임이 없는 PC에서는 설치 중에 자동으로 받아 설치한다(인터넷 필요). Windows 11과 최신 Windows 10에는 이미 들어 있다.
 
@@ -123,6 +123,9 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 | 1 GB MDF 10곡선 팬·줌 프레임 중앙값 | 5.8 / 8.3 ms | ≤ 16 ms |
 | 2,000채널 MDF 열기 + NAVIGATOR | 113 ms | ≤ 300 ms |
 | MDF 정답지 비트 대조(21파일, asammdf 기준) | 281/281 | 전부 |
+| 1 GB CSV 첫 열기(파싱) / 재열기(캐시) — 51열 × 2.0M행 | 2.4–4.1 s / 0.08–0.24 s | ≤ 5 s / ≤ 0.3 s |
+| 1 GB CSV 첫 화면 10곡선 · 팬·줌 프레임 중앙값 | ≤ 0.21 s · ≤ 6.9 / 7.6 ms | ≤ 2 s · ≤ 16 ms |
+| CSV 정답지 대조(21파일: 형식 감지·값 비트 동일·캐시) | 426/426 | 전부 |
 
 측정 방법·원본 수치: [docs/mf4/report-mf4.md](docs/mf4/report-mf4.md), [docs/rc2-report.md](docs/rc2-report.md), [docs/100rc-report.md](docs/100rc-report.md), [docs/094-report.md](docs/094-report.md), [docs/093-report.md](docs/093-report.md), [docs/webview-report.md](docs/webview-report.md), [docs/v3-report.md](docs/v3-report.md).
 
@@ -131,7 +134,7 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 |---|---|---|---|
 | .tdms | ✅ | ✅ | 2.0, DAQmx raw는 보고만, 미완성 마지막 세그먼트 무시 |
 | .tdm / .tdx | ✅ | — | raw_linear · implicit_linear · string_sequence |
-| .csv / .txt / .xyz | ✅ | — | 구분자·헤더 자동 감지 |
+| .csv / .txt / .tsv / .xyz | ✅ | — | 인코딩·구분자·소수점·헤더/단위 줄·전문·시간 열(타임스탬프 포함) 자동 감지, 확신 낮으면 가져오기 대화상자, 병렬 파싱 + 캐시. 미지원: 열마다 시간 열이 따로 있는 x,y 쌍 배치, 고정 폭 텍스트, 천 단위 구분 기호, 날짜·시간 두 열 분리, 따옴표 안 줄바꿈 |
 | .dxd | ✅ | — | 멀티레이트·IEEE 32/64, 저장소 빌드 포함 |
 | .mf4 / .mdf / .dat (ASAM MDF) | ✅ 베타 | — | 4.00–4.11 전체 블록(4.2는 4.1 집합으로, LD 열 저장 제외) · 3.0–3.3 · 정렬/비정렬 · DZ deflate/transposed · 비트 패킹·BE · 변환 LIN/RAT/ALG/TABI/TAB/RTAB/TABX/RTABX · 무효 비트→NaN · VLSD 텍스트 · 구조체·CA(CN 템플릿) · 바이트 배열 ≤64 B 원소 · CAN 로깅 원시 채널 · AT/EV 목록. 미지원: CA storage 1/2·축, 비정렬 VLSD, TTAB/TRANS/BITFIELD, 3.x BE 헤더 |
 | DataPlugin (.vbs / .py / .dll) | ✅ | — | VBS 객체 모델 부분집합, Python 마셜러 워커, C++ SDK DLL |
@@ -160,7 +163,8 @@ app\NexysView.App\bin\Release\net8.0-windows\win-x64\NexysView.exe
 | 테이블 선택 복사 | 셀 드래그 → `Ctrl+C` |
 | 파일 비교 | 파일 행 `Ctrl`-클릭 → COMPARE |
 
-## 알려진 문제 (1.1.0-beta.1)
+## 알려진 문제 (1.1.0-beta.2)
+- CSV: 첫 열기는 파싱 결과를 메모리에 둔다(1 GB 텍스트 → 약 0.8–1.2 GB). 두 번째부터는 `.nvcache`의 캐시를 매핑해 바로 연다. 열마다 시간 열이 따로 있는 x,y 쌍 배치·고정 폭 텍스트·천 단위 구분 기호·날짜/시각 두 열 분리는 시간 축 없이 열린다.
 - MDF: 생성 도구(asammdf)와 자체 라이터로 만든 파일로만 검증했다 — 실제 로거(벤더) 파일은 다음 베타에서. 압축 파일은 레코드를 메모리에 풀어 두므로(RAM/4, 최대 3 GB 예산) 1 GB 파일을 열면 프로세스 메모리 ~2.5 GB. 채널 하나를 읽어도 그룹 레코드 전체를 훑는 형식 구조라 첫 화면은 파일 크기에 비례한다. DBC 디코드·MDF 저장은 아직 없다.
 - 버스 캡처(.mon)는 이 앱이 열지 않는다 — 안내 창에서 NexysBus로 넘긴다(설치돼 있지 않으면 경로 안내만).
 - 시뮬레이터 프로젝트 내보내기는 템플릿 프로젝트 폴더(CDV + CPJ)가 있어야 하고, 필드의 비트 범위·타입·분해능만 쓴다(offset·단위·주기는 허브·XML에만). 자동화 스크립트는 시뮬레이터 COM이 감지될 때만 켜진다.

@@ -12,6 +12,7 @@ import { State } from '@core/types';
 import { esc, fmtInt, h } from '@core/util';
 import { ViewArea } from './view';
 import { showSettings } from './settings';
+import { csvDialogInfo, csvIdle, showCsvImport } from './csvimport';
 
 let S: State | null = null;
 const app = document.getElementById('app')!;
@@ -88,7 +89,7 @@ function applyState(next: State) {
   else if (S.mode === 'REPORT') report.setState(S);
   if (prevMode !== S.mode) { if (S.mode === 'VIEW') { view.setState(S, vcharts, vtables); for (const pv of view.plots.values()) pv.request({ adopt: true }); } if (S.mode === 'REPORT') report.refreshPage(); }
 }
-bridge.on('state', m => { const st = m.state as State; if (!st.files && S) st.files = S.files; else if (!st.files) st.files = []; applyState(st); showBusNotice((st as any).busNotice); });
+bridge.on('state', m => { const st = m.state as State; if (!st.files && S) st.files = S.files; else if (!st.files) st.files = []; applyState(st); showBusNotice((st as any).busNotice); if (WIN === 0) showCsvImport(st.csvReview); });
 
 // ---------- 1.0.0-rc.2: bus captures (.mon) belong to NexysBus — the viewer points there instead of opening them
 let noticeShown = '';
@@ -278,6 +279,14 @@ const test = {
   async pageTabAction(page: number, act: string) { const b = view.el.querySelector(`.ptab[data-page="${page}"]`) as HTMLElement | null; if (!b) throw new Error('no tab ' + page); if (act === 'click') b.click(); else if (act === 'dblclick') b.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); else if (act === 'remove') (b.querySelector('[data-pact=remove]') as HTMLElement)?.click(); await new Promise(r => setTimeout(r, 80)); await settle(); return true; },
   async renameInput(name: string) { const inp = view.el.querySelector('.ptab input') as HTMLInputElement | null; if (!inp) throw new Error('no rename input'); inp.value = name; inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await new Promise(r => setTimeout(r, 80)); await settle(); return true; },
   async modalButton(which: string) { const b = document.querySelector(`.modal [data-b="${which}"]`) as HTMLElement | null; if (!b) throw new Error('no modal button ' + which); b.click(); await new Promise(r => setTimeout(r, 80)); await settle(); return true; },
+  // ---- 1.1 CSV import dialog
+  csvDialog() { return csvDialogInfo(); },
+  /** Set a dialog control (select / number / checkbox) and wait for the preview round-trip. */
+  async csvSet(key: string, value: string) {
+    const c = document.querySelector(`.modal.csv [data-k="${key}"]`) as HTMLInputElement | HTMLSelectElement | null; if (!c) throw new Error('no csv control ' + key);
+    if ((c as HTMLInputElement).type === 'checkbox') (c as HTMLInputElement).checked = value === 'true'; else c.value = value;
+    c.dispatchEvent(new Event('change', { bubbles: true })); await new Promise(r => setTimeout(r, 30)); await csvIdle(); await settle(); return csvDialogInfo();
+  },
   /** Pan steps; returns the epoch ms at which each step's frame request was sent (cross-window latency). */
   async panClock(chart: number, n: number, frac = 0.05) { const pv = view.plots.get(chart)!; const out: number[] = []; for (let i = 0; i < n; i++) { const before = pv.frames; out.push(performance.timeOrigin + performance.now()); pv.panBy(frac); await waitFrames(pv, before); await new Promise(r => setTimeout(r, 40)); } return out; },
   frameClock(chart: number) { const pv = view.plots.get(chart); return pv ? { epoch: pv.lastPaintEpoch, frames: pv.frames, xmin: pv.view.xmin, xmax: pv.view.xmax } : null; },

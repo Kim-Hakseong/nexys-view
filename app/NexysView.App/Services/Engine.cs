@@ -23,6 +23,8 @@ public sealed class Engine : EngineBase
         return true;
     }
     protected override void OnFileRemoved(DataFile f) => Analysis.OnFileClosed(f);
+    /// <summary>1.1: the page has the CSV import dialog.</summary>
+    protected override bool CsvReviewSupported => true;
     protected override int ExportChannels(string path, bool tdms, List<Channel> chans, long first, long last, Curve? cv0) => tdms ? Export.TdmsExport.SaveRange(path, chans, first, last) : Export.CsvExport.Write(path, chans, first, last, cv0);
     protected override void ExtendSnapshot(Dictionary<string, object?> s) { s["analysis"] = Analysis.Dto(); s["report"] = Report.Dto(); s["busNotice"] = BusNotice; }
 }

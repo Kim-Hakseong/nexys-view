@@ -9,7 +9,6 @@ public partial class App : Application
     {
         base.OnStartup(e);
         AppPaths.AppName = "NexysView"; AppPaths.Ephemeral = () => Program.Fresh || SelfTest.Enabled; AppPaths.Automation = () => SelfTest.Enabled; AppInfo.Name = "Nexys VIEW";
-        foreach (var ext in new[] { ".csv", ".txt", ".xyz" }) AppState.ExtraOpeners[ext] = Import.CsvDataSource.Open;
         AppState.PluginOpener = (data, plugin) => System.IO.Path.GetExtension(plugin).ToLowerInvariant() switch
         {
             ".vbs" => Plugins.VbsDataPlugin.Open(data, plugin),
